@@ -1,27 +1,35 @@
-from tabnanny import verbose
+import os
 import dotenv
 
 dotenv.load_dotenv()
 
 from crewai import Agent, Task, Crew
 from crewai.project import CrewBase, agent, task, crew
-from tools import search_tool, scrape_tool
+from crewai_tools import FirecrawlSearchTool, FirecrawlScrapeWebsiteTool
+
+search_tool = FirecrawlSearchTool()
+scrape_tool = FirecrawlScrapeWebsiteTool()
+
+OUTPUT_FILE = "output/final_report.md"
+
 
 @CrewBase
-class News_Reader_Agent: 
+class News_Reader_Agent:
+    agents_config = "config/agents.yaml"
+    tasks_config  = "config/tasks.yaml"
 
     @agent
     def news_hunter_agent(self):
         return Agent(
             config=self.agents_config['news_hunter_agent'],
-            tools= [search_tool, scrape_tool]
+            tools=[search_tool, scrape_tool]
         )
-    
+
     @agent
     def summarizer_agent(self):
         return Agent(
             config=self.agents_config['summarizer_agent'],
-            tools= [scrape_tool]
+            tools=[scrape_tool]
         )
 
     @agent
@@ -56,8 +64,14 @@ class News_Reader_Agent:
             verbose=True,
         )
 
-News_Reader_Agent().assemble_crew().kickoff(
-    inputs={
-        "topic": "Korea's Econimic Status"
-    }
-)
+
+def run_crew(topic: str) -> str:
+    """Run the news crew pipeline. Returns path to the generated report file."""
+    News_Reader_Agent().assemble_crew().kickoff(inputs={"topic": topic})
+    return OUTPUT_FILE
+
+
+if __name__ == "__main__":
+    topic = os.getenv("NEWS_TOPIC", "AI, AI-agent, influence of agent in industry")
+    report_path = run_crew(topic)
+    print(f"Report written to {report_path}")

@@ -1,0 +1,247 @@
+content_harvesting_task:
+  description: >
+    Collect recent news articles based on {topic}.
+
+    Steps:
+    1. Break {topic} into 3-4 focused search queries that cover different angles.
+      For example, if the topic involves multiple concepts, search each one
+      separately with phrasing like:
+        - "[key concept A] latest news"
+        - "[key concept B] developments 2025"
+        - "[key concept A] [key concept B] industry impact"
+      Run each query using the search tool. This is critical — a single broad
+      query will miss important coverage.
+
+    2. From all search results combined, identify URLs from credible sources.
+
+    3. **IMPORTANT: Only select actual article pages, not topic hubs or tag listings**
+      Filter out any URLs that are likely to be:
+      - Topic/tag/section index pages (URLs containing "/tag/", "/topic/", "/hub/", "/section/", "/category/")
+      - Pages with no unique headline or timestamp
+      - Pages that only contain a list of other stories or links
+      ✅ Acceptable: full articles with a headline, body text, and publication date
+      ❌ Reject: https://www.nytimes.com/topic/, https://apnews.com/hub, etc.
+
+    4. For each accepted article URL:
+      - Use the scrape tool to extract the full article content
+      - Capture: title, source name, publication date, and the **complete article
+        body text**. Do not truncate or summarize the content at this stage —
+        the next stage depends on having the full text.
+
+    5. Filter out:
+      - Articles shorter than 200 words
+      - Articles older than 48 hours (unless specifically relevant to ongoing developments)
+      - Pages that failed to scrape or returned no substantial content
+
+    6. If fewer than 5 articles pass filtering, run additional searches with
+      different phrasings before finalizing.
+
+    7. Classify each article into a topic category (e.g. AI/ML, Industry & Business,
+      Policy & Regulation, Technology, Research, etc.)
+
+    8. Score each article:
+      - Credibility (1-10): based on source reputation and content quality
+      - Relevance (1-10): based on how well it matches {topic}
+
+  expected_output: >
+    A well-structured markdown document. Articles ordered by Relevance Score descending:
+
+    # News Articles Collection: {topic}
+
+    **Collection Summary**
+    - Total articles found:
+    - Articles after filtering:
+    - Duplicates removed:
+    - Sources accessed:
+    - Search queries used:
+    - Search timestamp:
+
+    ---
+
+    ## Article 1: [Article Headline]
+
+    **Source:**
+    **Date:**
+    **URL:**
+    **Category:**
+    **Credibility Score:**
+    **Relevance Score:**
+
+    **Content:**
+    [Full article body text here — do not truncate]
+
+    ---
+
+    [Repeat for all articles, ordered by Relevance Score descending]
+
+  agent: news_hunter_agent
+  markdown: true
+  output_file: output/content_harvest.md
+  create_directory: true
+
+summarization_task:
+  description: >
+    Summarize each article collected by the previous task into three tiers.
+
+    Work primarily from the full article content already provided in the harvest
+    output. Only use the scrape tool as a fallback if a specific article's content
+    is missing or clearly truncated.
+
+    Process articles in order of relevance score (highest first).
+
+    For each article, produce:
+    1. **Headline Summary** (≤280 characters)
+       - Tweet-style, lead with the single most newsworthy element
+       - Include key numbers or metrics when available
+
+    2. **Executive Summary** (150–200 words)
+       - Concise professional briefing
+       - Cover: what happened, key players, immediate implications
+       - Maintain objectivity — present facts, not opinions
+
+    3. **Comprehensive Summary** (400–600 words)
+       - Full context and background
+       - Multiple perspectives where the source provides them
+       - Explain technical concepts for a general audience
+       - Cover implications and future outlook
+       - Do not include any facts not present in the source article
+
+    End each article's section with 3 bullet Key Takeaways — the distilled
+    essentials a reader must not miss.
+
+  expected_output: >
+    A structured markdown document. Articles ordered by relevance score descending:
+
+    # News Summaries: {topic}
+
+    **Summary Report Overview**
+    - Total articles processed:
+    - Summary generation date:
+
+    ---
+
+    ## Article 1: [Original Headline]
+
+    **Source:**
+    **Date:**
+    **Original URL:**
+    **Credibility Score:**
+    **Relevance Score:**
+
+    ### 📱 Headline Summary (Tweet-length)
+    [≤280-character summary]
+
+    ### 📋 Executive Summary
+    [150-200 word professional briefing]
+
+    ### 📖 Comprehensive Summary
+    [400-600 word detailed summary with full context]
+
+    **Key Takeaways:**
+    - [Most important point]
+    - [Second important point]
+    - [Third important point]
+
+    ---
+
+    [Repeat for all articles, ordered by relevance score descending]
+
+  agent: summarizer_agent
+  markdown: true
+  output_file: output/summary.md
+  create_directory: true
+
+final_report_assembly_task:
+  description: >
+    Assemble all summaries into a single, publication-ready daily news briefing.
+
+    Assembly process:
+    1. Review all summarized articles along with their credibility and relevance
+      scores from the harvest stage.
+    2. Select the lead story: the article with the strongest combination of
+      relevance and credibility. The lead gets its comprehensive summary.
+    3. Group the remaining articles into sections based on what they actually
+      cover — derive section headings from the content. Do not force articles
+      into preset categories like "Breaking News" or "Technology" unless the
+      content genuinely fits. Each section gets a short editorial introduction
+      that explains why these stories are grouped together.
+    4. Choose summary depth per story:
+      - 1-2 most important stories per section: use the comprehensive summary
+      - Supporting stories: use the executive summary
+    5. Write an Editor's Analysis that identifies cross-story themes, the
+      broader significance of today's developments, and what to watch next.
+    6. Preserve all source attributions and original URLs.
+    7. Keep markdown formatting clean and consistent — this output is saved
+      directly to a Notion page and emailed. Use standard headings, clear
+      section breaks, and no deeply nested formatting.
+
+  expected_output: >
+    A complete, publication-ready markdown document:
+
+    # Daily News Briefing: {topic}
+
+    **Date:**
+    **Generated:**
+    **Stories Covered:**
+
+    ---
+
+    ## Executive Summary
+
+    [Opening paragraph: the day's most important developments and why they matter]
+
+    ---
+
+    ## 🚨 Lead Story
+
+    ### [Compelling headline]
+
+    [Comprehensive summary — full context, implications, and significance]
+
+    **Source:** [Publication] | **Read more:** [Link](url)
+
+    ---
+
+    ## [Dynamic Section Heading Derived From Content]
+
+    [Brief editorial introduction — why these stories matter together]
+
+    ### [Story Headline]
+    [Comprehensive or executive summary based on importance]
+    **Source:** [Publication] | **Read more:** [Link](url)
+
+    ### [Story Headline]
+    [Comprehensive or executive summary based on importance]
+    **Source:** [Publication] | **Read more:** [Link](url)
+
+    ---
+
+    [Additional dynamic sections as needed — each with its own introduction]
+
+    ---
+
+    ## 🎯 Editor's Analysis
+
+    **Key Themes Today:**
+    - [Major theme identified across multiple stories]
+    - [Secondary pattern or development]
+
+    **What This Means:**
+    [Broader implications of today's developments]
+
+    **Looking Ahead:**
+    [What to watch in the coming days based on today's stories]
+
+    ---
+
+    ## 📚 Further Reading
+
+    - [Related story or background context with link]
+    - [Related story or background context with link]
+
+    ---
+
+  agent: curator_agent
+  markdown: true
+  output_file: output/final_report.md
+  create_directory: true

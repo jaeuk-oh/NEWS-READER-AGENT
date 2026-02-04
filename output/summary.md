@@ -1,1 +1,0 @@
-Please see above the structured markdown document containing the multi-tier summaries for all seven articles on Korea's economic status as of late December 2025. Each includes a headline, executive and comprehensive summary, with metadata-based insights, ensuring clarity, context, and relevance for diverse professional audiences.
