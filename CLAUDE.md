@@ -61,3 +61,7 @@ The three stages are coupled through their `expected_output` formats. Each stage
 - `output/*.md` files are generated at runtime and gitignored. The `output/` directory is preserved via `.gitkeep`.
 - `NEWS_TOPIC` in `.env` supports comma-separated topics (e.g. `AI, AI-agent, influence of agent in industry`). The hunter breaks these into 3-4 focused sub-queries automatically.
 - The Notion converter in `services/notion.py` handles: H1/H2/H3, dividers (`---`), bullet lists (`- ...`), and paragraphs with inline bold/links. Anything outside that set will be dropped or rendered as plain text.
+
+## Rules for Claude
+
+- **Do NOT read or modify `.env` directly.** If you suspect an issue with environment variables, ask the user first before taking any action.

@@ -8,7 +8,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 NOTION_API_BASE = "https://api.notion.com/v1"
-NOTION_VERSION  = "2024-06-26"
+NOTION_VERSION  = "2022-06-28"
 
 
 def _headers() -> dict:

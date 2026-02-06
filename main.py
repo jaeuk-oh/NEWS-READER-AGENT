@@ -5,13 +5,11 @@ dotenv.load_dotenv()
 
 from crewai import Agent, Task, Crew
 from crewai.project import CrewBase, agent, task, crew
-from crewai_tools import FirecrawlSearchTool, FirecrawlScrapeWebsiteTool
-
-search_tool = FirecrawlSearchTool()
-scrape_tool = FirecrawlScrapeWebsiteTool()
+from tools import web_search_tool
+from services.notion import create_notion_page
+from services.notifier import send_email
 
 OUTPUT_FILE = "output/final_report.md"
-
 
 @CrewBase
 class News_Reader_Agent:
@@ -22,14 +20,14 @@ class News_Reader_Agent:
     def news_hunter_agent(self):
         return Agent(
             config=self.agents_config['news_hunter_agent'],
-            tools=[search_tool, scrape_tool]
+            tools=[web_search_tool]
         )
 
     @agent
     def summarizer_agent(self):
         return Agent(
             config=self.agents_config['summarizer_agent'],
-            tools=[scrape_tool]
+            tools=[web_search_tool]
         )
 
     @agent
@@ -75,3 +73,17 @@ if __name__ == "__main__":
     topic = os.getenv("NEWS_TOPIC", "AI, AI-agent, influence of agent in industry")
     report_path = run_crew(topic)
     print(f"Report written to {report_path}")
+
+    # Read the generated report
+    with open(report_path, "r", encoding="utf-8") as f:
+        report_content = f.read()
+
+    # Upload to Notion
+    print("Uploading to Notion...")
+    notion_url = create_notion_page(topic, report_content)
+    print(f"Notion page created: {notion_url}")
+
+    # Send email notification
+    print("Sending email notification...")
+    send_email(topic, report_content, notion_url)
+    print("Email sent successfully!")
