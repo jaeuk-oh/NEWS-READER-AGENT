@@ -65,3 +65,4 @@ The three stages are coupled through their `expected_output` formats. Each stage
 ## Rules for Claude
 
 - **Do NOT read or modify `.env` directly.** If you suspect an issue with environment variables, ask the user first before taking any action.
+- **Always get user approval for commit messages.** Before committing, show the proposed commit message to the user and wait for confirmation.
