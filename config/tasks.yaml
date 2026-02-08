@@ -153,93 +153,108 @@ summarization_task:
 
 final_report_assembly_task:
   description: >
-    Assemble all summaries into a single, publication-ready daily news briefing.
+    Assemble all summaries into a single cohesive daily news briefing.
 
-    Assembly process:
-    1. Review all summarized articles along with their credibility and relevance
-      scores from the harvest stage.
-    2. Select the lead story: the article with the strongest combination of
-      relevance and credibility. The lead gets its comprehensive summary.
-    3. Group the remaining articles into sections based on what they actually
-      cover — derive section headings from the content. Do not force articles
-      into preset categories like "Breaking News" or "Technology" unless the
-      content genuinely fits. Each section gets a short editorial introduction
-      that explains why these stories are grouped together.
-    4. Choose summary depth per story:
-      - 1-2 most important stories per section: use the comprehensive summary
-      - Supporting stories: use the executive summary
-    5. Write an Editor's Analysis that identifies cross-story themes, the
-      broader significance of today's developments, and what to watch next.
-    6. Preserve all source attributions and original URLs.
-    7. Keep markdown formatting clean and consistent — this output is saved
-      directly to a Notion page and emailed. Use standard headings, clear
-      section breaks, and no deeply nested formatting.
+    You are producing the FINAL document that will be directly published
+    to Notion and distributed via email.
 
-  expected_output: >
-    A complete, publication-ready markdown document:
+    Assembly rules:
+
+    1. Review all summarized articles along with their credibility and relevance scores.
+    2. Select the Lead Story based on the strongest combination of relevance and credibility.
+       The lead story MUST use its Comprehensive Summary.
+    3. Group remaining stories into logical sections derived naturally from
+       the actual content themes. Do NOT invent artificial categories.
+    4. For each section:
+       - Write a short editorial introduction (2–4 sentences) explaining
+         why these stories belong together and why they matter.
+       - Use Comprehensive Summary for the 1–2 most important stories.
+       - Use Executive Summary for supporting stories.
+    5. Preserve all original source attributions and URLs exactly.
+    6. Write an Editor's Analysis section that synthesizes cross-story themes,
+       broader implications, and forward-looking insights.
+    7. Keep formatting clean, readable, and professional.
+       Use standard markdown headings only (##, ###).
+       Avoid deeply nested formatting.
+
+    -----------------------------
+    CRITICAL OUTPUT INSTRUCTIONS
+    -----------------------------
+
+    • Return ONLY the final markdown document.
+    • Do NOT include explanations, commentary, or meta text.
+    • Do NOT describe what you did.
+    • Do NOT say phrases like:
+        - "The above is..."
+        - "This report..."
+        - "Publication-ready..."
+        - "Here is the final document"
+        - "Formatted in markdown"
+    • Do NOT wrap the output in code fences.
+    • Begin immediately with:
 
     # Daily News Briefing: {topic}
 
-    **Date:**
-    **Generated:**
-    **Stories Covered:**
+    The first character of your response must be '#'.
+
+  expected_output: >
+    # Daily News Briefing: {topic}
+
+    **Date:** [Current date]
+    **Generated:** [Timestamp]
+    **Stories Covered:** [Number]
 
     ---
 
     ## Executive Summary
 
-    [Opening paragraph: the day's most important developments and why they matter]
+    [Opening paragraph explaining the day's most significant developments
+    and why they matter in context.]
 
     ---
 
     ## 🚨 Lead Story
 
-    ### [Compelling headline]
+    ### [Compelling Headline]
 
-    [Comprehensive summary — full context, implications, and significance]
+    [Comprehensive Summary]
 
     **Source:** [Publication] | **Read more:** [Link](url)
 
     ---
 
-    ## [Dynamic Section Heading Derived From Content]
+    ## [Dynamic Section Heading]
 
-    [Brief editorial introduction — why these stories matter together]
+    [Editorial introduction explaining the grouping.]
 
     ### [Story Headline]
-    [Comprehensive or executive summary based on importance]
+    [Comprehensive or Executive Summary]
     **Source:** [Publication] | **Read more:** [Link](url)
 
     ### [Story Headline]
-    [Comprehensive or executive summary based on importance]
+    [Comprehensive or Executive Summary]
     **Source:** [Publication] | **Read more:** [Link](url)
-
-    ---
-
-    [Additional dynamic sections as needed — each with its own introduction]
 
     ---
 
     ## 🎯 Editor's Analysis
 
     **Key Themes Today:**
-    - [Major theme identified across multiple stories]
-    - [Secondary pattern or development]
+    - [Theme]
+    - [Theme]
 
     **What This Means:**
-    [Broader implications of today's developments]
+    [Implications]
 
     **Looking Ahead:**
-    [What to watch in the coming days based on today's stories]
+    [Forward view]
 
     ---
 
     ## 📚 Further Reading
 
-    - [Related story or background context with link]
-    - [Related story or background context with link]
-
-    ---
+    - [Related link]
+    - [Related link]
 
   agent: curator_agent
   markdown: true
