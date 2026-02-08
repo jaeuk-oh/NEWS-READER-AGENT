@@ -28,12 +28,6 @@ jobs:
       - name: Create output directory
         run: mkdir -p output
 
-      - name: Debug env
-        run: |
-          echo "OPENAI_API_KEY length: ${#OPENAI_API_KEY}"
-          echo "NEWS_TOPIC: $NEWS_TOPIC"
-
-
       - name: Run news pipeline
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
