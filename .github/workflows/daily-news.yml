@@ -38,4 +38,6 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GMAIL_RECIPIENT: ${{ secrets.GMAIL_RECIPIENT }}
           NEWS_TOPIC: ${{ secrets.NEWS_TOPIC }}
+          TRANSLATION_ENABLED: ${{ secrets.TRANSLATION_ENABLED }}
+          TRANSLATION_TARGET_LANG: ${{ secrets.TRANSLATION_TARGET_LANG }}
         run: uv run python -c "from scheduler import run_pipeline; run_pipeline()"
