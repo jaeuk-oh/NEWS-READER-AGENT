@@ -25,7 +25,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 REPORT_FILE = "output/final_report.md"
-TRANSLATED_REPORT_FILE = "output/final_report_ko.md"
 
 
 def run_pipeline():
@@ -38,11 +37,8 @@ def run_pipeline():
       - Email failure       → log.
     """
     topic = os.getenv("NEWS_TOPIC", "AI, AI-agent, influence of agent in industry")
-    translation_enabled = os.getenv("TRANSLATION_ENABLED", "false").lower() == "true"
-    target_lang = os.getenv("TRANSLATION_TARGET_LANG", "ko")
 
     logger.info(f"Pipeline starting — topic: {topic}")
-    logger.info(f"Translation: {'enabled' if translation_enabled else 'disabled'} (target: {target_lang})")
 
     # --- Stage 1: CrewAI pipeline ---
     try:
@@ -60,29 +56,13 @@ def run_pipeline():
         logger.error(f"❌ [Stage 1] {REPORT_FILE} not found after crew run. Aborting.")
         return
 
-    # --- Stage 1.5: Translation (optional) ---
-    if translation_enabled:
-        try:
-            from services.translator import translate_report_safe
-
-            logger.info(f"🌐 [Stage 1.5] Starting translation (en → {target_lang})...")
-            translated_md = translate_report_safe(report_md, target_lang=target_lang)
-
-            if translated_md:
-                # Save translated version
-                with open(TRANSLATED_REPORT_FILE, "w", encoding="utf-8") as f:
-                    f.write(translated_md)
-
-                # Use translated version for Notion/Email
-                report_md = translated_md
-                logger.info(f"✅ [Stage 1.5] Translation completed. Saved to: {TRANSLATED_REPORT_FILE}")
-            else:
-                logger.warning("⚠️  [Stage 1.5] Translation returned None. Using English version.")
-
-        except Exception as e:
-            logger.error(f"❌ [Stage 1.5] Translation failed: {e}. Using English version.")
-    else:
-        logger.info("⏭️  [Stage 1.5] Translation skipped (TRANSLATION_ENABLED=false)")
+    # --- Stage 1.5: Translate to Korean ---
+    try:
+        from services.translator import translate_to_korean
+        report_md = translate_to_korean(report_md)
+        logger.info("[Stage 1.5] Report translated to Korean.")
+    except Exception as e:
+        logger.warning(f"[Stage 1.5] Translation failed, using original English report: {e}")
 
     # --- Stage 2: Publish to Notion ---
     notion_url = None
