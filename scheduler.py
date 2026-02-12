@@ -54,6 +54,14 @@ def run_pipeline():
         logger.error(f"[Stage 1] {REPORT_FILE} not found after crew run. Aborting.")
         return
 
+    # --- Stage 1.5: Translate to Korean ---
+    try:
+        from services.translator import translate_to_korean
+        report_md = translate_to_korean(report_md)
+        logger.info("[Stage 1.5] Report translated to Korean.")
+    except Exception as e:
+        logger.warning(f"[Stage 1.5] Translation failed, using original English report: {e}")
+
     # --- Stage 2: Publish to Notion ---
     notion_url = None
     try:

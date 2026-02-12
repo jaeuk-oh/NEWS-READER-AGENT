@@ -78,6 +78,14 @@ if __name__ == "__main__":
     with open(report_path, "r", encoding="utf-8") as f:
         report_content = f.read()
 
+    # Translate to Korean
+    try:
+        from services.translator import translate_to_korean
+        report_content = translate_to_korean(report_content)
+        print("Report translated to Korean.")
+    except Exception as e:
+        print(f"Translation failed, using original English report: {e}")
+
     # Upload to Notion
     print("Uploading to Notion...")
     notion_url = create_notion_page(topic, report_content)
