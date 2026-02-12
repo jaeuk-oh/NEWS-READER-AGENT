@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-CrewAI multi-agent pipeline with a daily scheduler. `NEWS_TOPIC` from `.env` flows through three sequential agents. Output is saved to Notion, then emailed.
+CrewAI multi-agent pipeline with a daily scheduler. `NEWS_TOPIC` from `.env` flows through three sequential agents. Output is saved to Notion, then emailed. Optional translation stage converts English reports to target language.
 
 ```
 scheduler.py  (07:00 KST daily)
@@ -32,6 +32,9 @@ main.run_crew(topic)
     └─ curator_agent       →  output/final_report.md
            score-based lead selection, dynamic sections, Editor's Analysis
     │
+    ├─ services/translator.py →  output/final_report_ko.md (optional)
+    │      Google Translate via deep-translator, markdown structure preserved
+    │                            ↓ translated report (if TRANSLATION_ENABLED=true)
     ├─ services/notion.py  →  new Notion page (created daily)
     └─ services/notifier.py → Gmail with the full report
 ```
@@ -61,6 +64,7 @@ The three stages are coupled through their `expected_output` formats. Each stage
 - `output/*.md` files are generated at runtime and gitignored. The `output/` directory is preserved via `.gitkeep`.
 - `NEWS_TOPIC` in `.env` supports comma-separated topics (e.g. `AI, AI-agent, influence of agent in industry`). The hunter breaks these into 3-4 focused sub-queries automatically.
 - The Notion converter in `services/notion.py` handles: H1/H2/H3, dividers (`---`), bullet lists (`- ...`), and paragraphs with inline bold/links. Anything outside that set will be dropped or rendered as plain text.
+- **Translation (optional):** Set `TRANSLATION_ENABLED=true` in `.env` to enable automatic translation. Uses `deep-translator` library (no API key required). Preserves markdown structure including headings, bullets, bold, and links. Target language defaults to Korean (`ko`) but can be changed via `TRANSLATION_TARGET_LANG`. Translation failures fall back gracefully to English version.
 
 ## Rules for Claude
 

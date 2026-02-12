@@ -28,50 +28,60 @@ REPORT_FILE = "output/final_report.md"
 
 
 def run_pipeline():
-    """Execute crew → Notion → email.
+    """Execute crew → translate → Notion → email.
 
     Error strategy:
-      - Crew failure  → abort. No report to send.
-      - Notion failure → log, continue to email.
-      - Email failure  → log.
+      - Crew failure        → abort. No report to send.
+      - Translation failure → log, continue with English version.
+      - Notion failure      → log, continue to email.
+      - Email failure       → log.
     """
     topic = os.getenv("NEWS_TOPIC", "AI, AI-agent, influence of agent in industry")
+
     logger.info(f"Pipeline starting — topic: {topic}")
 
     # --- Stage 1: CrewAI pipeline ---
     try:
         from main import run_crew
         run_crew(topic)
-        logger.info(f"Crew completed. Report: {REPORT_FILE}")
+        logger.info(f"✅ [Stage 1] Crew completed. Report: {REPORT_FILE}")
     except Exception as e:
-        logger.error(f"[Stage 1] Crew failed: {e}")
+        logger.error(f"❌ [Stage 1] Crew failed: {e}")
         return
 
     try:
         with open(REPORT_FILE, "r", encoding="utf-8") as f:
             report_md = f.read()
     except FileNotFoundError:
-        logger.error(f"[Stage 1] {REPORT_FILE} not found after crew run. Aborting.")
+        logger.error(f"❌ [Stage 1] {REPORT_FILE} not found after crew run. Aborting.")
         return
+
+    # --- Stage 1.5: Translate to Korean ---
+    try:
+        from services.translator import translate_to_korean
+        report_md = translate_to_korean(report_md)
+        logger.info("[Stage 1.5] Report translated to Korean.")
+    except Exception as e:
+        logger.warning(f"[Stage 1.5] Translation failed, using original English report: {e}")
 
     # --- Stage 2: Publish to Notion ---
     notion_url = None
     try:
         from services.notion import create_notion_page
         notion_url = create_notion_page(topic=topic, markdown_content=report_md)
-        logger.info(f"[Stage 2] Notion page created: {notion_url}")
+        logger.info(f"✅ [Stage 2] Notion page created: {notion_url}")
     except Exception as e:
-        logger.error(f"[Stage 2] Notion publish failed: {e}")
+        logger.error(f"❌ [Stage 2] Notion publish failed: {e}")
 
     # --- Stage 3: Send email ---
     try:
         from services.notifier import send_email
         send_email(topic=topic, report_md=report_md, notion_url=notion_url)
-        logger.info("[Stage 3] Email sent.")
+        logger.info("✅ [Stage 3] Email sent.")
     except Exception as e:
-        logger.error(f"[Stage 3] Email failed: {e}")
+        logger.error(f"❌ [Stage 3] Email failed: {e}")
 
-    logger.info("Pipeline complete.")
+    logger.info("🎉 Pipeline complete.")
 
 
 if __name__ == "__main__":
