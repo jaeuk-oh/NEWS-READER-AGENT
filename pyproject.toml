@@ -11,4 +11,5 @@ dependencies = [
     "schedule>=1.2.0",
     "deep-translator>=1.11.4",
     "supabase>=2.16.0",
+    "streamlit>=1.54.0",
 ]
