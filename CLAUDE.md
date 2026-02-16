@@ -68,5 +68,10 @@ The three stages are coupled through their `expected_output` formats. Each stage
 
 ## Rules for Claude
 
-- **Do NOT read or modify `.env` directly.** If you suspect an issue with environment variables, ask the user first before taking any action.
-- **Always get user approval for commit messages.** Before committing, show the proposed commit message to the user and wait for confirmation.
+### STRICT RULES (절대 위반 금지)
+
+아래 3가지는 **반드시 사전 승인**을 받아야 하며, 무단으로 수행해서는 안 된다.
+
+1. **`.env` 파일 — 읽기/수정 금지.** 환경 변수에 문제가 의심되면 유저에게 먼저 확인할 것.
+2. **브랜치 생성 — 사전 승인 필수.** 새 브랜치를 만들기 전에 브랜치 이름과 목적을 유저에게 보여주고 승인을 받을 것.
+3. **커밋 & 푸시 — 사전 승인 필수.** 커밋하기 전에 커밋 메시지를 유저에게 보여주고 승인을 받을 것. 푸시 대상 브랜치도 명시할 것.
