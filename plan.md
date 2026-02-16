@@ -23,26 +23,27 @@ subscription_scheduler.py
 
 ### 핵심 설계 원칙
 1. **기존 코드 최소 변경** — 기존 `scheduler.py`, `main.py`는 건드리지 않음
-2. **SQLite** — 외부 DB 불필요, 파일 하나로 구독 관리
+2. **Supabase** — 클라우드 PostgreSQL 기반 구독 관리 (멀티 디바이스 접근, 확장성)
 3. **구독 스케줄러 분리** — 기존 스케줄러와 독립적으로 동작
 
 ---
 
 ## 신규 파일
 
-### 1. `db.py` — 구독 DB 관리
+### 1. `db.py` — 구독 DB 관리 ✅
 
 ```python
-# SQLite 기반 구독 CRUD
-# 테이블: subscriptions (id, email, topic, schedule_time, is_active, created_at)
+# Supabase 기반 구독 CRUD
+# 테이블: subscriptions (id uuid PK, email text, topic text, schedule_time text, is_active bool, created_at timestamptz)
+# 환경 변수: SUPABASE_URL, SUPABASE_KEY
 ```
 
-- `add_subscription(email, topic, schedule_time)` — 구독 등록
+- `add_subscription(email, topic, schedule_time)` — 구독 등록 (중복 방지)
 - `get_subscriptions()` — 전체 조회
-- `get_due_subscriptions(current_time)` — 현재 시간에 발송할 구독 조회
-- `deactivate_subscription(id)` — 구독 해제
+- `get_due_subscriptions(current_time)` — 현재 시간에 발송할 활성 구독 조회
+- `get_subscriptions_by_email(email)` — 특정 이메일 구독 조회
+- `activate_subscription(id)` / `deactivate_subscription(id)` — 활성/비활성 토글
 - `delete_subscription(id)` — 구독 삭제
-- 동일 이메일+토픽 중복 방지
 
 ### 2. `app.py` — Streamlit 웹 UI
 
@@ -116,15 +117,28 @@ uv run python subscription_scheduler.py
 ```toml
 # pyproject.toml에 추가
 "streamlit>=1.45.0",
+"supabase>=2.16.0",
 ```
-
-SQLite는 Python 표준 라이브러리(`sqlite3`)이므로 추가 의존성 없음.
 
 ---
 
 ## 고려사항
 
-- **동시성**: Streamlit과 구독 스케줄러가 동일 SQLite 파일을 접근하므로 WAL 모드 활성화
+- **Supabase 설정**: Supabase 프로젝트에서 `subscriptions` 테이블을 수동 생성해야 함 (아래 SQL 참조)
 - **이메일 검증**: 기본적인 형식 검증만 (정규식). 인증 이메일 발송은 범위 밖
 - **API 비용**: 동일 토픽 구독자를 그룹핑하여 Firecrawl/OpenAI API 호출 최소화
 - **기존 파이프라인**: `.env`의 `GMAIL_RECIPIENT`로 보내는 기존 흐름은 완전히 독립적으로 유지
+
+## Supabase 테이블 생성 SQL
+
+```sql
+CREATE TABLE subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    schedule_time TEXT NOT NULL,       -- "HH:MM" format
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (email, topic)
+);
+```

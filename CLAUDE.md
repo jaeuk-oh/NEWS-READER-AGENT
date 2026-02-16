@@ -59,6 +59,12 @@ The three stages are coupled through their `expected_output` formats. Each stage
 - `summarization_task` carries `**Credibility Score:**` and `**Relevance Score:**` through, and adds `**Key Takeaways:**` → `final_report_assembly_task` uses scores for lead selection and section placement
 - `final_report_assembly_task` outputs clean markdown → `services/notion.py` `markdown_to_blocks()` converts it to Notion blocks. If you change the report's heading or list patterns, update the converter to match.
 
+### Subscription system (WIP)
+
+- **`db.py`** — Supabase 기반 구독 CRUD. `subscriptions` 테이블 사용.
+- **Required env vars:** `SUPABASE_URL`, `SUPABASE_KEY`
+- 자세한 구현 계획은 `plan.md` 참조.
+
 ## Notes
 
 - `output/*.md` files are generated at runtime and gitignored. The `output/` directory is preserved via `.gitkeep`.
