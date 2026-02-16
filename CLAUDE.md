@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Run the crew only:** `uv run python main.py`
 - **Start the full scheduled pipeline:** `uv run python scheduler.py`
 - **Run the pipeline once manually (no waiting for 07:00):** `uv run python -c "from scheduler import run_pipeline; run_pipeline()"`
+- **Start the Streamlit subscription UI:** `uv run streamlit run app.py`
+- **Start the subscription scheduler:** `uv run python subscription_scheduler.py`
 - **Required env vars:** Copy `.env.example` → `.env` and fill in values. See that file for all keys and setup instructions.
 - No test suite or linter is configured.
 
@@ -59,9 +61,26 @@ The three stages are coupled through their `expected_output` formats. Each stage
 - `summarization_task` carries `**Credibility Score:**` and `**Relevance Score:**` through, and adds `**Key Takeaways:**` → `final_report_assembly_task` uses scores for lead selection and section placement
 - `final_report_assembly_task` outputs clean markdown → `services/notion.py` `markdown_to_blocks()` converts it to Notion blocks. If you change the report's heading or list patterns, update the converter to match.
 
-### Subscription system (WIP)
+### Subscription system
+
+외부 유저가 Streamlit UI를 통해 키워드·이메일·시간을 등록하면 해당 시간에 뉴스 브리핑을 발송하는 시스템. 기존 파이프라인과 완전히 독립적으로 동작.
+
+```
+Streamlit (app.py)
+    ├─ 구독 등록/관리 UI (2탭)
+    └─ db.py → Supabase (subscriptions 테이블)
+
+subscription_scheduler.py (매분 체크)
+    ├─ db.get_due_subscriptions(HH:MM)
+    ├─ 동일 토픽 그룹핑 → main.run_crew() 1회 실행
+    ├─ 번역 (설정 시)
+    └─ send_email_to_subscriber() → 구독자 이메일 발송
+```
 
 - **`db.py`** — Supabase 기반 구독 CRUD. `subscriptions` 테이블 사용.
+- **`app.py`** — Streamlit 웹 UI (구독 등록 + 관리).
+- **`subscription_scheduler.py`** — 구독 기반 스케줄러 (매분 체크, 토픽 그룹핑).
+- **`services/notifier.py`** — `send_email_to_subscriber()` 추가됨.
 - **Required env vars:** `SUPABASE_URL`, `SUPABASE_KEY`
 - 자세한 구현 계획은 `plan.md` 참조.
 
