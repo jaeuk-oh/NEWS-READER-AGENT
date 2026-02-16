@@ -64,7 +64,7 @@ subscription_scheduler.py
 - 등록된 구독 중 하나를 선택하여 즉시 파이프라인 실행
 - 결과 미리보기
 
-### 3. `subscription_scheduler.py` — 구독 기반 스케줄러
+### 3. `subscription_scheduler.py` — 구독 기반 스케줄러 ✅
 
 ```
 매 1분마다:
