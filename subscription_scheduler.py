@@ -97,6 +97,41 @@ def check_and_run():
     logger.info("Subscription check complete.")
 
 
+def run_once():
+    """One-shot mode for GitHub Actions: process all subscriptions due this hour."""
+    import db
+    from services.notifier import send_email_to_subscriber
+
+    now = datetime.now()
+    hour = now.strftime("%H")
+    due = db.get_due_subscriptions_for_hour(hour)
+
+    if not due:
+        logger.info(f"No subscriptions due for hour {hour}:xx")
+        return
+
+    logger.info(f"Found {len(due)} subscription(s) due in hour {hour}:xx")
+
+    sorted_due = sorted(due, key=itemgetter("topic"))
+    for topic, group in groupby(sorted_due, key=itemgetter("topic")):
+        subscribers = list(group)
+        emails = [s["email"] for s in subscribers]
+        logger.info(f"Running pipeline for topic '{topic}' → {len(emails)} subscriber(s)")
+
+        report_md = _run_for_topic(topic)
+        if report_md is None:
+            continue
+
+        for email in emails:
+            try:
+                send_email_to_subscriber(email, topic, report_md)
+                logger.info(f"✅ Email sent to {email}")
+            except Exception as e:
+                logger.error(f"❌ Email to {email} failed: {e}")
+
+    logger.info("run_once complete.")
+
+
 if __name__ == "__main__":
     schedule.every(1).minutes.do(check_and_run)
     logger.info("Subscription scheduler ready — checking every minute. Ctrl+C to stop.")

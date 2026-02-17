@@ -1,0 +1,43 @@
+name: Subscription News Pipeline
+
+on:
+  schedule:
+    # Run every hour at :00 (UTC). Covers all subscriber time slots.
+    - cron: '0 * * * *'
+  workflow_dispatch:  # Manual trigger button
+
+jobs:
+  send-subscriptions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Create output directory
+        run: mkdir -p output
+
+      - name: Run subscription pipeline
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          GMAIL_SENDER: ${{ secrets.GMAIL_SENDER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TRANSLATION_ENABLED: ${{ secrets.TRANSLATION_ENABLED }}
+          TRANSLATION_TARGET_LANG: ${{ secrets.TRANSLATION_TARGET_LANG }}
+          TZ: Asia/Seoul
+        run: uv run python -c "from subscription_scheduler import run_once; run_once()"

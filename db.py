@@ -80,6 +80,27 @@ def get_due_subscriptions(current_time: str) -> list[dict]:
     return result.data
 
 
+def get_due_subscriptions_for_hour(hour: str) -> list[dict]:
+    """Return active subscriptions whose schedule_time falls within the given hour.
+
+    Args:
+        hour: Two-digit hour string, e.g. "07" or "14".
+
+    Returns:
+        All active subscriptions with schedule_time between HH:00 and HH:59.
+    """
+    client = _get_client()
+    result = (
+        client.table(TABLE)
+        .select("*")
+        .gte("schedule_time", f"{hour}:00")
+        .lte("schedule_time", f"{hour}:59")
+        .eq("is_active", True)
+        .execute()
+    )
+    return result.data
+
+
 def deactivate_subscription(subscription_id: str) -> dict:
     """Set is_active=false for the given subscription."""
     client = _get_client()
