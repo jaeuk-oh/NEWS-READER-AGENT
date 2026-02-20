@@ -6,8 +6,6 @@ dotenv.load_dotenv()
 from crewai import Agent, Task, Crew
 from crewai.project import CrewBase, agent, task, crew
 from tools import web_search_tool
-from services.notion import create_notion_page
-from services.notifier import send_email
 
 OUTPUT_FILE = "output/final_report.md"
 
@@ -73,25 +71,3 @@ if __name__ == "__main__":
     topic = os.getenv("NEWS_TOPIC", "AI, AI-agent, influence of agent in industry")
     report_path = run_crew(topic)
     print(f"Report written to {report_path}")
-
-    # Read the generated report
-    with open(report_path, "r", encoding="utf-8") as f:
-        report_content = f.read()
-
-    # Translate to Korean
-    try:
-        from services.translator import translate_to_korean
-        report_content = translate_to_korean(report_content)
-        print("Report translated to Korean.")
-    except Exception as e:
-        print(f"Translation failed, using original English report: {e}")
-
-    # Upload to Notion
-    print("Uploading to Notion...")
-    notion_url = create_notion_page(topic, report_content)
-    print(f"Notion page created: {notion_url}")
-
-    # Send email notification
-    print("Sending email notification...")
-    send_email(topic, report_content, notion_url)
-    print("Email sent successfully!")

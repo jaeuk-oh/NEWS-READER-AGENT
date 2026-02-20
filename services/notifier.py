@@ -13,55 +13,8 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 
 
-def send_email(topic: str, report_md: str, notion_url: str | None = None) -> None:
-    """Send the daily news briefing via Gmail.
-
-    Args:
-        topic: News topic — used in the subject line.
-        report_md: Full markdown report content (plain text body).
-        notion_url: If provided, prepended to the body as a link to the Notion page.
-
-    Requires env vars: GMAIL_SENDER, GMAIL_APP_PASSWORD, GMAIL_RECIPIENT
-    """
-    sender    = os.environ["GMAIL_SENDER"]
-    password  = os.environ["GMAIL_APP_PASSWORD"]
-    recipient = os.environ["GMAIL_RECIPIENT"]
-
-    today   = datetime.now().strftime("%Y-%m-%d")
-    subject = f"[News Briefing] {today} — {topic}"
-
-    body_parts: list[str] = []
-    if notion_url:
-        body_parts.append(f"📄 Notion page: {notion_url}\n")
-    body_parts.append(report_md)
-    body = "\n".join(body_parts)
-
-    html_body = markdown2.markdown(
-        body, extras=["fenced-code-blocks", "tables", "header-ids"]
-    )
-
-    msg = MIMEMultipart("alternative")
-    msg["From"]    = sender
-    msg["To"]      = recipient
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain", "utf-8"))
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(sender, password)
-        server.sendmail(sender, recipient, msg.as_string())
-
-    logger.info(f"Email sent to {recipient}")
-
-
 def send_email_to_subscriber(recipient: str, topic: str, report_md: str) -> None:
     """Send a news briefing to a specific subscriber.
-
-    Uses the same GMAIL_SENDER / GMAIL_APP_PASSWORD as ``send_email``,
-    but sends to the given *recipient* instead of the env-var default.
 
     Args:
         recipient: Subscriber email address.

@@ -155,8 +155,8 @@ final_report_assembly_task:
   description: >
     Assemble all summaries into a single cohesive daily news briefing.
 
-    You are producing the FINAL document that will be directly published
-    to Notion and distributed via email. Target audience is general readers
+    You are producing the FINAL document that will be directly distributed
+    via email to subscribers. Target audience is general readers
     who want a clear, scannable briefing.
 
     Assembly rules:
