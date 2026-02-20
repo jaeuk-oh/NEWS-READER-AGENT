@@ -5,6 +5,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
+import markdown2
+
 logger = logging.getLogger(__name__)
 
 SMTP_HOST = "smtp.gmail.com"
@@ -34,11 +36,16 @@ def send_email(topic: str, report_md: str, notion_url: str | None = None) -> Non
     body_parts.append(report_md)
     body = "\n".join(body_parts)
 
-    msg = MIMEMultipart()
+    html_body = markdown2.markdown(
+        body, extras=["fenced-code-blocks", "tables", "header-ids"]
+    )
+
+    msg = MIMEMultipart("alternative")
     msg["From"]    = sender
     msg["To"]      = recipient
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.ehlo()
@@ -55,7 +62,6 @@ def send_email_to_subscriber(recipient: str, topic: str, report_md: str) -> None
 
     Uses the same GMAIL_SENDER / GMAIL_APP_PASSWORD as ``send_email``,
     but sends to the given *recipient* instead of the env-var default.
-    Notion URL is intentionally omitted for subscribers.
 
     Args:
         recipient: Subscriber email address.
@@ -68,11 +74,16 @@ def send_email_to_subscriber(recipient: str, topic: str, report_md: str) -> None
     today   = datetime.now().strftime("%Y-%m-%d")
     subject = f"[News Briefing] {today} — {topic}"
 
-    msg = MIMEMultipart()
+    html_body = markdown2.markdown(
+        report_md, extras=["fenced-code-blocks", "tables", "header-ids"]
+    )
+
+    msg = MIMEMultipart("alternative")
     msg["From"]    = sender
     msg["To"]      = recipient
     msg["Subject"] = subject
     msg.attach(MIMEText(report_md, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.ehlo()
