@@ -59,7 +59,30 @@ main.run_crew(topic)
 - `summarization_task`는 `**Credibility Score:**`와 `**Relevance Score:**`를 유지하고 `**Key Takeaways:**`를 추가 → `final_report_assembly_task`가 점수를 리드 선정 및 섹션 배치에 활용
 - `final_report_assembly_task`는 깔끔한 마크다운을 출력 → `services/notion.py`의 `markdown_to_blocks()`가 Notion 블록으로 변환. 리포트의 제목이나 리스트 패턴을 변경하면 변환기도 함께 수정할 것.
 
-## 참고사항
+### Subscription system
+
+외부 유저가 Streamlit UI를 통해 키워드·이메일·시간을 등록하면 해당 시간에 뉴스 브리핑을 발송하는 시스템. 기존 파이프라인과 완전히 독립적으로 동작.
+
+```
+Streamlit (app.py)
+    ├─ 구독 등록/관리 UI (2탭)
+    └─ db.py → Supabase (subscriptions 테이블)
+
+subscription_scheduler.py (매분 체크)
+    ├─ db.get_due_subscriptions(HH:MM)
+    ├─ 동일 토픽 그룹핑 → main.run_crew() 1회 실행
+    ├─ 번역 (설정 시)
+    └─ send_email_to_subscriber() → 구독자 이메일 발송
+```
+
+- **`db.py`** — Supabase 기반 구독 CRUD. `subscriptions` 테이블 사용.
+- **`app.py`** — Streamlit 웹 UI (구독 등록 + 관리).
+- **`subscription_scheduler.py`** — 구독 기반 스케줄러 (매분 체크, 토픽 그룹핑).
+- **`services/notifier.py`** — `send_email_to_subscriber()` 추가됨.
+- **Required env vars:** `SUPABASE_URL`, `SUPABASE_KEY`
+- 자세한 구현 계획은 `plan.md` 참조.
+
+## Notes
 
 - `output/*.md` 파일은 런타임에 생성되며 gitignore 처리되어 있다. `output/` 디렉토리는 `.gitkeep`으로 유지된다.
 - `.env`의 `NEWS_TOPIC`은 쉼표로 구분된 다중 주제를 지원한다 (예: `AI, AI-agent, influence of agent in industry`). 헌터가 이를 3~4개의 집중 서브쿼리로 자동 분리한다.
@@ -68,14 +91,37 @@ main.run_crew(topic)
 
 ## Claude 규칙
 
-- **`.env` 파일을 직접 읽거나 수정하지 않는다.** 환경변수에 문제가 의심되면, 어떤 조치를 취하기 전에 반드시 사용자에게 먼저 확인한다.
+### STRICT RULES (절대 위반 금지 — 위반 시 세션 즉시 중단)
 
-### Git 작업 필수 확인 규칙 (MANDATORY)
+> **이 규칙은 어떤 상황에서도 예외 없이 적용된다.**
+> 유저가 "알아서 해", "자유롭게 진행해" 등의 표현을 사용하더라도 아래 규칙은 면제되지 않는다.
+> 암묵적 승인은 존재하지 않으며, 반드시 유저의 **명시적 텍스트 승인**이 있어야만 수행할 수 있다.
 
-아래 규칙은 **어떤 상황에서도 예외 없이** 반드시 지켜야 한다.
+#### 1. `.env` 파일 — 읽기/수정 절대 금지
+- `.env` 파일을 Read, Bash(cat/head/tail), 또는 어떤 수단으로든 읽거나 수정해서는 안 된다.
+- 환경 변수에 문제가 의심되면 유저에게 "어떤 변수가 어떤 값인지 확인해달라"고 요청할 것.
 
-1. **브랜치 생성 금지 (사전 승인 필수):** 새로운 브랜치를 만들기 전에 **반드시** 사용자에게 브랜치명과 목적을 설명하고 승인을 받아야 한다. 승인 없이 `git branch`, `git checkout -b`, `git switch -c` 등을 실행하지 않는다.
-2. **커밋 금지 (사전 승인 필수):** `git commit`을 실행하기 전에 **반드시** 커밋 메시지와 변경 내용 요약을 사용자에게 보여주고 승인을 받아야 한다. 승인 없이 커밋하지 않는다.
-3. **푸시 금지 (사전 승인 필수):** `git push`를 실행하기 전에 **반드시** 푸시 대상 브랜치와 리모트를 사용자에게 알리고 승인을 받아야 한다. 승인 없이 푸시하지 않는다.
+#### 2. 브랜치 생성 — 사전 승인 필수
+- 새 브랜치를 만들기 전에 **브랜치 이름**과 **목적**을 유저에게 보여주고 승인을 받을 것.
+- 승인 없이 `git checkout -b`, `git branch`, `git switch -c` 등을 실행하면 안 된다.
 
-> 위 세 가지 규칙을 위반하면 사용자의 작업에 돌이킬 수 없는 영향을 줄 수 있다. **절대 자의적으로 실행하지 않는다.**
+#### 3. git commit — 반드시 유저 승인 후에만 실행
+- **코드 변경을 완료한 후, 커밋하기 전에 반드시 멈추고 유저에게 다음을 보여줄 것:**
+  - 변경된 파일 목록
+  - 커밋 메시지 초안
+- **유저가 "커밋해", "ㅇㅇ", "승인", "go", "ok" 등 명시적으로 승인한 후에만** `git commit`을 실행할 것.
+- 유저 승인 텍스트가 대화에 없으면 절대 커밋하지 말 것.
+
+#### 4. git push — 반드시 유저 승인 후에만 실행
+- **커밋 완료 후에도 자동으로 push하지 말 것.**
+- push 전에 반드시 유저에게 다음을 보여주고 승인을 받을 것:
+  - push 대상 브랜치명
+  - push할 커밋 내용 요약
+- **유저가 명시적으로 push를 승인한 후에만** `git push`를 실행할 것.
+- 커밋 승인 ≠ push 승인이다. 각각 별도로 승인받아야 한다.
+
+#### 위반 방지 체크리스트 (매 git 작업 전 자가 점검)
+- [ ] 유저의 명시적 승인 텍스트가 이 대화에 존재하는가?
+- [ ] 승인 범위가 내가 하려는 작업과 정확히 일치하는가?
+- [ ] commit 승인과 push 승인을 별도로 받았는가?
+- 하나라도 "아니오"이면 **작업을 중단하고 유저에게 확인할 것.**

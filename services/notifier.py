@@ -48,3 +48,37 @@ def send_email(topic: str, report_md: str, notion_url: str | None = None) -> Non
         server.sendmail(sender, recipient, msg.as_string())
 
     logger.info(f"Email sent to {recipient}")
+
+
+def send_email_to_subscriber(recipient: str, topic: str, report_md: str) -> None:
+    """Send a news briefing to a specific subscriber.
+
+    Uses the same GMAIL_SENDER / GMAIL_APP_PASSWORD as ``send_email``,
+    but sends to the given *recipient* instead of the env-var default.
+    Notion URL is intentionally omitted for subscribers.
+
+    Args:
+        recipient: Subscriber email address.
+        topic: News topic — used in the subject line.
+        report_md: Full markdown report content (plain text body).
+    """
+    sender   = os.environ["GMAIL_SENDER"]
+    password = os.environ["GMAIL_APP_PASSWORD"]
+
+    today   = datetime.now().strftime("%Y-%m-%d")
+    subject = f"[News Briefing] {today} — {topic}"
+
+    msg = MIMEMultipart()
+    msg["From"]    = sender
+    msg["To"]      = recipient
+    msg["Subject"] = subject
+    msg.attach(MIMEText(report_md, "plain", "utf-8"))
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(sender, password)
+        server.sendmail(sender, recipient, msg.as_string())
+
+    logger.info(f"Subscriber email sent to {recipient}")
