@@ -156,26 +156,34 @@ final_report_assembly_task:
     Assemble all summaries into a single cohesive daily news briefing.
 
     You are producing the FINAL document that will be directly published
-    to Notion and distributed via email.
+    to Notion and distributed via email. Target audience is general readers
+    who want a clear, scannable briefing.
 
     Assembly rules:
 
     1. Review all summarized articles along with their credibility and relevance scores.
-    2. Select the Lead Story based on the strongest combination of relevance and credibility.
-       The lead story MUST use its Comprehensive Summary.
-    3. Group remaining stories into logical sections derived naturally from
+    2. Build "Today at a Glance" — one bullet per story, each a single sentence
+       capturing the core news. This lets readers scan the full briefing in seconds.
+    3. Select the Lead Story: pick the article with the highest
+       (relevance + credibility) total. On a tie, prefer higher relevance.
+       The lead story MUST use its Comprehensive Summary and include
+       3 bullet Key Takeaways.
+    4. Group remaining stories into logical sections derived naturally from
        the actual content themes. Do NOT invent artificial categories.
-    4. For each section:
-       - Write a short editorial introduction (2–4 sentences) explaining
+    5. For each section:
+       - Write a short editorial introduction (2–3 sentences) explaining
          why these stories belong together and why they matter.
-       - Use Comprehensive Summary for the 1–2 most important stories.
-       - Use Executive Summary for supporting stories.
-    5. Preserve all original source attributions and URLs exactly.
-    6. Write an Editor's Analysis section that synthesizes cross-story themes,
-       broader implications, and forward-looking insights.
-    7. Keep formatting clean, readable, and professional.
-       Use standard markdown headings only (##, ###).
-       Avoid deeply nested formatting.
+       - Use Executive Summary ONLY (150–200 words) for every non-lead story.
+    6. Preserve all original source attributions and URLs exactly.
+    7. Write an "Analysis and Outlook" section — a single cohesive paragraph
+       (200–300 words) that synthesizes cross-story themes, broader implications,
+       and a forward-looking view. Do NOT split it into sub-sections.
+    8. Do NOT include a "Further Reading" section. Source links already appear
+       under each story.
+    9. Do NOT use emoji in any heading or text.
+    10. Keep formatting clean, readable, and professional.
+        Use standard markdown headings only (##, ###).
+        Avoid deeply nested formatting.
 
     -----------------------------
     CRITICAL OUTPUT INSTRUCTIONS
@@ -200,61 +208,55 @@ final_report_assembly_task:
   expected_output: >
     # Daily News Briefing: {topic}
 
-    **Date:** [Current date]
-    **Generated:** [Timestamp]
+    **Date:** [YYYY-MM-DD]
     **Stories Covered:** [Number]
 
     ---
 
-    ## Executive Summary
+    ## Today at a Glance
 
-    [Opening paragraph explaining the day's most significant developments
-    and why they matter in context.]
+    - [One-line summary of story 1]
+    - [One-line summary of story 2]
+    - [One-line summary of story 3]
+    - ...
 
     ---
 
-    ## 🚨 Lead Story
+    ## Lead Story
 
-    ### [Compelling Headline]
+    ### [Headline]
 
-    [Comprehensive Summary]
+    [Comprehensive Summary — 400-600 words]
 
-    **Source:** [Publication] | **Read more:** [Link](url)
+    **Key Takeaways:**
+    - [Point 1]
+    - [Point 2]
+    - [Point 3]
+
+    **Source:** [Publication] — [Link](url)
 
     ---
 
     ## [Dynamic Section Heading]
 
-    [Editorial introduction explaining the grouping.]
+    [2-3 sentence editorial introduction]
 
     ### [Story Headline]
-    [Comprehensive or Executive Summary]
-    **Source:** [Publication] | **Read more:** [Link](url)
+    [Executive Summary — 150-200 words]
+    **Source:** [Publication] — [Link](url)
 
     ### [Story Headline]
-    [Comprehensive or Executive Summary]
-    **Source:** [Publication] | **Read more:** [Link](url)
+    [Executive Summary — 150-200 words]
+    **Source:** [Publication] — [Link](url)
 
     ---
 
-    ## 🎯 Editor's Analysis
+    ## Analysis and Outlook
 
-    **Key Themes Today:**
-    - [Theme]
-    - [Theme]
-
-    **What This Means:**
-    [Implications]
-
-    **Looking Ahead:**
-    [Forward view]
+    [Single cohesive editorial — 200-300 words. Synthesizes themes,
+    implications, and forward view. No sub-sections.]
 
     ---
-
-    ## 📚 Further Reading
-
-    - [Related link]
-    - [Related link]
 
   agent: curator_agent
   markdown: true
