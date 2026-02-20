@@ -1,65 +1,63 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+이 파일은 Claude Code (claude.ai/code)가 이 저장소의 코드를 다룰 때 참고하는 지침서이다.
 
-## Environment & Commands
+## 환경 및 명령어
 
-- **Package manager:** `uv` (Python 3.13). Virtual env is at `.venv`.
-- **Install / sync deps:** `uv sync`
-- **Add a dependency:** `uv add <package>`
-- **Run the crew only:** `uv run python main.py`
-- **Start the full scheduled pipeline:** `uv run python scheduler.py`
-- **Run the pipeline once manually (no waiting for 07:00):** `uv run python -c "from scheduler import run_pipeline; run_pipeline()"`
-- **Start the Streamlit subscription UI:** `uv run streamlit run app.py`
-- **Start the subscription scheduler:** `uv run python subscription_scheduler.py`
-- **Required env vars:** Copy `.env.example` → `.env` and fill in values. See that file for all keys and setup instructions.
-- No test suite or linter is configured.
+- **패키지 매니저:** `uv` (Python 3.13). 가상환경 경로는 `.venv`.
+- **의존성 설치/동기화:** `uv sync`
+- **의존성 추가:** `uv add <package>`
+- **크루만 실행:** `uv run python main.py`
+- **전체 스케줄 파이프라인 시작:** `uv run python scheduler.py`
+- **파이프라인 1회 수동 실행 (07:00 대기 없이):** `uv run python -c "from scheduler import run_pipeline; run_pipeline()"`
+- **필수 환경변수:** `.env.example`을 `.env`로 복사한 뒤 값을 채운다. 모든 키와 설정 방법은 해당 파일 참조.
+- 테스트 스위트나 린터는 설정되어 있지 않다.
 
-## Architecture
+## 아키텍처
 
-CrewAI multi-agent pipeline with a daily scheduler. `NEWS_TOPIC` from `.env` flows through three sequential agents. Output is saved to Notion, then emailed. Optional translation stage converts English reports to target language.
+CrewAI 멀티 에이전트 파이프라인에 일일 스케줄러가 결합된 구조. `.env`의 `NEWS_TOPIC`이 세 개의 순차 에이전트를 거쳐 처리된다. 결과물은 Notion에 저장된 후 이메일로 발송된다. 선택적으로 영문 리포트를 대상 언어로 번역하는 단계가 있다.
 
 ```
-scheduler.py  (07:00 KST daily)
+scheduler.py  (매일 07:00 KST)
     │
     ▼
 main.run_crew(topic)
     │
     ├─ news_hunter_agent   →  output/content_harvest.md
-    │      multi-query search, scrape, full text + scores
-    │                            ↓ passes full text + credibility/relevance scores
+    │      멀티 쿼리 검색, 스크래핑, 전문 + 점수
+    │                            ↓ 전문 + 신뢰도/관련성 점수 전달
     ├─ summarizer_agent    →  output/summary.md
-    │      3-tier summaries + Key Takeaways, scores carried through
-    │                            ↓ passes scored summaries
+    │      3단계 요약 + 핵심 시사점, 점수 유지
+    │                            ↓ 점수 포함 요약 전달
     └─ curator_agent       →  output/final_report.md
-           score-based lead selection, dynamic sections, Editor's Analysis
+           점수 기반 리드 선정, 동적 섹션, 에디터 분석
     │
-    ├─ services/translator.py →  output/final_report_ko.md (optional)
-    │      Google Translate via deep-translator, markdown structure preserved
-    │                            ↓ translated report (if TRANSLATION_ENABLED=true)
-    ├─ services/notion.py  →  new Notion page (created daily)
-    └─ services/notifier.py → Gmail with the full report
+    ├─ services/translator.py →  output/final_report_ko.md (선택)
+    │      deep-translator를 통한 Google 번역, 마크다운 구조 유지
+    │                            ↓ 번역된 리포트 (TRANSLATION_ENABLED=true인 경우)
+    ├─ services/notion.py  →  새 Notion 페이지 (매일 생성)
+    └─ services/notifier.py → Gmail로 전체 리포트 발송
 ```
 
-### Where behavior is defined
+### 동작이 정의된 위치
 
-- **Agent personas** → `config/agents.yaml`
-- **Task logic, output format, output files** → `config/tasks.yaml`
-- **Agent/task wiring** → `main.py` (`News_Reader_Agent` class; `@agent`/`@task`/`@crew` decorators bind the YAML configs)
-- **Notion markdown→blocks conversion** → `services/notion.py` (`markdown_to_blocks`)
-- **Scheduler & error handling** → `scheduler.py` (Stage 1 crew failure aborts; Stage 2/3 Notion/email failures are independent)
+- **에이전트 페르소나** → `config/agents.yaml`
+- **태스크 로직, 출력 형식, 출력 파일** → `config/tasks.yaml`
+- **에이전트/태스크 연결** → `main.py` (`News_Reader_Agent` 클래스; `@agent`/`@task`/`@crew` 데코레이터가 YAML 설정을 바인딩)
+- **Notion 마크다운→블록 변환** → `services/notion.py` (`markdown_to_blocks`)
+- **스케줄러 및 에러 처리** → `scheduler.py` (1단계 크루 실패 시 중단; 2/3단계 Notion/이메일 실패는 독립적)
 
-### Tools
+### 도구
 
-`main.py` uses `FirecrawlSearchTool` and `FirecrawlScrapeWebsiteTool` from `crewai_tools` directly. No custom tool wrappers.
+`main.py`는 `crewai_tools`의 `FirecrawlSearchTool`과 `FirecrawlScrapeWebsiteTool`을 직접 사용한다. 커스텀 도구 래퍼는 없다.
 
-### Stage coupling — important when editing
+### 스테이지 간 결합 — 수정 시 주의
 
-The three stages are coupled through their `expected_output` formats. Each stage's output becomes the next stage's input context. If you change a field in one stage's `expected_output`, update the next stage's `description` to match:
+세 스테이지는 `expected_output` 형식을 통해 결합되어 있다. 각 스테이지의 출력이 다음 스테이지의 입력 컨텍스트가 된다. 한 스테이지의 `expected_output` 필드를 변경하면, 다음 스테이지의 `description`도 맞춰서 수정해야 한다:
 
-- `content_harvesting_task` outputs `**Content:**` (full article text) and scores → `summarization_task` reads from that content instead of re-scraping
-- `summarization_task` carries `**Credibility Score:**` and `**Relevance Score:**` through, and adds `**Key Takeaways:**` → `final_report_assembly_task` uses scores for lead selection and section placement
-- `final_report_assembly_task` outputs clean markdown → `services/notion.py` `markdown_to_blocks()` converts it to Notion blocks. If you change the report's heading or list patterns, update the converter to match.
+- `content_harvesting_task`는 `**Content:**` (기사 전문)과 점수를 출력 → `summarization_task`는 재스크래핑 없이 해당 내용을 읽음
+- `summarization_task`는 `**Credibility Score:**`와 `**Relevance Score:**`를 유지하고 `**Key Takeaways:**`를 추가 → `final_report_assembly_task`가 점수를 리드 선정 및 섹션 배치에 활용
+- `final_report_assembly_task`는 깔끔한 마크다운을 출력 → `services/notion.py`의 `markdown_to_blocks()`가 Notion 블록으로 변환. 리포트의 제목이나 리스트 패턴을 변경하면 변환기도 함께 수정할 것.
 
 ### Subscription system
 
@@ -86,12 +84,12 @@ subscription_scheduler.py (매분 체크)
 
 ## Notes
 
-- `output/*.md` files are generated at runtime and gitignored. The `output/` directory is preserved via `.gitkeep`.
-- `NEWS_TOPIC` in `.env` supports comma-separated topics (e.g. `AI, AI-agent, influence of agent in industry`). The hunter breaks these into 3-4 focused sub-queries automatically.
-- The Notion converter in `services/notion.py` handles: H1/H2/H3, dividers (`---`), bullet lists (`- ...`), and paragraphs with inline bold/links. Anything outside that set will be dropped or rendered as plain text.
-- **Translation (optional):** Set `TRANSLATION_ENABLED=true` in `.env` to enable automatic translation. Uses `deep-translator` library (no API key required). Preserves markdown structure including headings, bullets, bold, and links. Target language defaults to Korean (`ko`) but can be changed via `TRANSLATION_TARGET_LANG`. Translation failures fall back gracefully to English version.
+- `output/*.md` 파일은 런타임에 생성되며 gitignore 처리되어 있다. `output/` 디렉토리는 `.gitkeep`으로 유지된다.
+- `.env`의 `NEWS_TOPIC`은 쉼표로 구분된 다중 주제를 지원한다 (예: `AI, AI-agent, influence of agent in industry`). 헌터가 이를 3~4개의 집중 서브쿼리로 자동 분리한다.
+- `services/notion.py`의 Notion 변환기가 처리하는 항목: H1/H2/H3, 구분선 (`---`), 글머리 기호 목록 (`- ...`), 인라인 볼드/링크가 포함된 문단. 이 외의 항목은 무시되거나 일반 텍스트로 렌더링된다.
+- **번역 (선택):** `.env`에서 `TRANSLATION_ENABLED=true`로 설정하면 자동 번역이 활성화된다. `deep-translator` 라이브러리를 사용하며 API 키가 불필요하다. 제목, 글머리 기호, 볼드, 링크 등 마크다운 구조가 유지된다. 대상 언어 기본값은 한국어 (`ko`)이며 `TRANSLATION_TARGET_LANG`으로 변경 가능하다. 번역 실패 시 영문 버전으로 자동 대체된다.
 
-## Rules for Claude
+## Claude 규칙
 
 ### STRICT RULES (절대 위반 금지 — 위반 시 세션 즉시 중단)
 
