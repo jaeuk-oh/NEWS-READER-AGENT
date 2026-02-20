@@ -12,5 +12,8 @@ wheels/
 # Environment variables
 .env
 
+# Streamlit secrets (real credentials)
+.streamlit/secrets.toml
+
 # Generated pipeline outputs
 output/*.md
