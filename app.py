@@ -12,15 +12,24 @@ st.set_page_config(page_title="News Briefing Subscription", page_icon="📰", la
 if not st.user.is_logged_in:
     st.title("📰 News Briefing Subscription")
     st.write("서비스를 이용하려면 Google 계정으로 로그인하세요.")
-    st.login("google")
+    if st.button("Google로 로그인", type="primary"):
+        st.login("google")
     st.stop()
 
-with st.sidebar:
-    st.write(f"**{st.user.name}**")
-    st.write(st.user.email)
-    st.logout()
+_user_name = st.user.get("name") or st.user.get("given_name") or "사용자"
+_user_email = st.user.get("email") or ""
 
-user_email = st.user.email
+with st.sidebar:
+    st.write(f"**{_user_name}**")
+    st.write(_user_email)
+    if st.button("로그아웃"):
+        st.logout()
+
+if not _user_email:
+    st.error("Google 계정에서 이메일 정보를 가져올 수 없습니다. 다른 계정으로 시도해주세요.")
+    st.stop()
+
+user_email = _user_email
 
 # ── Main UI ───────────────────────────────────────────────────────
 
@@ -49,13 +58,19 @@ with tab_register:
                 st.success(f"구독 완료! {time_str}에 '{topic.strip()}' 브리핑을 발송합니다.")
             except ValueError as e:
                 st.warning(str(e))
+            except Exception as e:
+                st.error(f"구독 등록 중 오류가 발생했습니다: {e}")
 
 # ── Tab 2: Manage ────────────────────────────────────────────────
 
 with tab_manage:
     st.subheader("내 구독 관리")
 
-    subs = db.get_subscriptions_by_email(user_email)
+    try:
+        subs = db.get_subscriptions_by_email(user_email)
+    except Exception as e:
+        st.error(f"구독 목록을 불러오는 중 오류가 발생했습니다: {e}")
+        subs = []
     if not subs:
         st.info("등록된 구독이 없습니다.")
     else:
@@ -66,13 +81,22 @@ with tab_manage:
 
             if sub["is_active"]:
                 if col2.button("비활성", key=f"deact_{sub['id']}"):
-                    db.deactivate_subscription(sub["id"])
+                    try:
+                        db.deactivate_subscription(sub["id"])
+                    except Exception as e:
+                        st.error(f"오류: {e}")
                     st.rerun()
             else:
                 if col2.button("활성화", key=f"act_{sub['id']}"):
-                    db.activate_subscription(sub["id"])
+                    try:
+                        db.activate_subscription(sub["id"])
+                    except Exception as e:
+                        st.error(f"오류: {e}")
                     st.rerun()
 
             if col3.button("삭제", key=f"del_{sub['id']}"):
-                db.delete_subscription(sub["id"])
+                try:
+                    db.delete_subscription(sub["id"])
+                except Exception as e:
+                    st.error(f"오류: {e}")
                 st.rerun()
