@@ -7,6 +7,16 @@ import db  # noqa: E402  (after load_dotenv so SUPABASE_* vars are available)
 
 st.set_page_config(page_title="News Briefing Subscription", page_icon="📰", layout="centered")
 
+LANGUAGES = {
+    "한국어": "ko",
+    "English (번역 없음)": "en",
+    "日本語": "ja",
+    "中文 (简体)": "zh-CN",
+    "Español": "es",
+    "Français": "fr",
+    "Deutsch": "de",
+}
+
 # ── Auth ──────────────────────────────────────────────────────────
 
 if not st.user.is_logged_in:
@@ -45,6 +55,8 @@ with tab_register:
 
     topic = st.text_input("키워드 (토픽)", placeholder="AI, AI-agent")
     schedule_time = st.time_input("발송 시간", value=None)
+    lang_label = st.selectbox("리포트 언어", list(LANGUAGES.keys()), index=0)
+    lang_code = LANGUAGES[lang_label]
 
     if st.button("구독하기", type="primary"):
         if not topic.strip():
@@ -54,7 +66,7 @@ with tab_register:
         else:
             time_str = schedule_time.strftime("%H:%M")
             try:
-                db.add_subscription(user_email, topic.strip(), time_str)
+                db.add_subscription(user_email, topic.strip(), time_str, lang_code)
                 st.success(f"구독 완료! {time_str}에 '{topic.strip()}' 브리핑을 발송합니다.")
             except ValueError as e:
                 st.warning(str(e))
@@ -77,7 +89,8 @@ with tab_manage:
         for sub in subs:
             col1, col2, col3 = st.columns([3, 1, 1])
             status = "✅ 활성" if sub["is_active"] else "⏸️ 비활성"
-            col1.write(f"**{sub['topic']}** — {sub['schedule_time']} ({status})")
+            lang = sub.get("target_lang", "ko")
+            col1.write(f"**{sub['topic']}** — {sub['schedule_time']} | {lang} ({status})")
 
             if sub["is_active"]:
                 if col2.button("비활성", key=f"deact_{sub['id']}"):

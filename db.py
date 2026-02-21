@@ -20,13 +20,14 @@ def _get_client() -> Client:
 TABLE = "subscriptions"
 
 
-def add_subscription(email: str, topic: str, schedule_time: str) -> dict:
+def add_subscription(email: str, topic: str, schedule_time: str, target_lang: str = "ko") -> dict:
     """Add a new subscription.
 
     Args:
         email: Subscriber email address.
         topic: News topic / keywords.
         schedule_time: Delivery time in "HH:MM" format.
+        target_lang: BCP-47 language code for report translation (e.g. "ko", "en", "ja").
 
     Returns:
         The inserted row as a dict.
@@ -49,10 +50,10 @@ def add_subscription(email: str, topic: str, schedule_time: str) -> dict:
 
     result = (
         client.table(TABLE)
-        .insert({"email": email, "topic": topic, "schedule_time": schedule_time})
+        .insert({"email": email, "topic": topic, "schedule_time": schedule_time, "target_lang": target_lang})
         .execute()
     )
-    logger.info(f"Subscription added: {email} / {topic} / {schedule_time}")
+    logger.info(f"Subscription added: {email} / {topic} / {schedule_time} / lang={target_lang}")
     return result.data[0]
 
 
