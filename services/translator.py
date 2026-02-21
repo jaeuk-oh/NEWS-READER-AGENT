@@ -61,8 +61,8 @@ def _split_into_chunks(lines: list[str], limit: int) -> list[str]:
     return chunks
 
 
-def translate_to_korean(markdown: str) -> str:
-    """Translate an English markdown report to Korean.
+def translate_to_TargetLang(markdown: str, target_lang: str = "ko") -> str:
+    """Translate a markdown report to the specified target language.
 
     Preserves markdown formatting by:
     1. Protecting URLs with placeholders before translation
@@ -79,7 +79,7 @@ def translate_to_korean(markdown: str) -> str:
     chunks = _split_into_chunks(lines, _CHUNK_LIMIT)
 
     # Step 3: translate each chunk
-    translator = GoogleTranslator(source="en", target="ko")
+    translator = GoogleTranslator(source="auto", target=target_lang)
     translated_chunks: list[str] = []
 
     for i, chunk in enumerate(chunks):
@@ -104,5 +104,5 @@ def translate_to_korean(markdown: str) -> str:
     # Step 4: restore original URLs
     result = _restore_urls(result, urls)
 
-    logger.info("Report translated to Korean successfully")
+    logger.info(f"Report translated to '{target_lang}' successfully")
     return result

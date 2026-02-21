@@ -29,12 +29,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 REPORT_FILE = "output/final_report.md"
+HARVEST_FILE = "output/content_harvest.md"
 
 
 def _run_for_topic(topic: str) -> str | None:
-    """Run the CrewAI pipeline for *topic* and return the report markdown.
+    """Run the CrewAI pipeline for *topic* and return the raw English report markdown.
 
-    Returns None on failure.
+    Returns None on failure or when no articles were found.
     """
     try:
         from main import run_crew
@@ -44,23 +45,22 @@ def _run_for_topic(topic: str) -> str | None:
         logger.error(f"❌ Crew failed for topic '{topic}': {e}")
         return None
 
+    # Zero-article guard: skip email if harvest found nothing
+    try:
+        with open(HARVEST_FILE, "r", encoding="utf-8") as f:
+            harvest = f.read()
+        if "Articles after filtering: 0" in harvest:
+            logger.warning(f"⚠️ No articles found for topic '{topic}'. Skipping email.")
+            return None
+    except FileNotFoundError:
+        pass
+
     try:
         with open(REPORT_FILE, "r", encoding="utf-8") as f:
-            report_md = f.read()
+            return f.read()
     except FileNotFoundError:
         logger.error(f"❌ {REPORT_FILE} not found after crew run.")
         return None
-
-    # Optional translation
-    try:
-        from services.translator import translate_to_korean
-
-        report_md = translate_to_korean(report_md)
-        logger.info(f"Report translated for topic '{topic}'.")
-    except Exception as e:
-        logger.warning(f"Translation skipped for '{topic}': {e}")
-
-    return report_md
 
 
 def check_and_run():
@@ -80,19 +80,28 @@ def check_and_run():
     sorted_due = sorted(due, key=itemgetter("topic"))
     for topic, group in groupby(sorted_due, key=itemgetter("topic")):
         subscribers = list(group)
-        emails = [s["email"] for s in subscribers]
-        logger.info(f"Running pipeline for topic '{topic}' → {len(emails)} subscriber(s)")
+        logger.info(f"Running pipeline for topic '{topic}' → {len(subscribers)} subscriber(s)")
 
         report_md = _run_for_topic(topic)
         if report_md is None:
             continue
 
-        for email in emails:
+        for sub in subscribers:
+            target_lang = sub.get("target_lang", "ko")
+            final_report = report_md
+
+            if target_lang != "en":
+                try:
+                    from services.translator import translate_to_TargetLang
+                    final_report = translate_to_TargetLang(report_md, target_lang)
+                except Exception as e:
+                    logger.warning(f"Translation skipped for {sub['email']}: {e}")
+
             try:
-                send_email_to_subscriber(email, topic, report_md)
-                logger.info(f"✅ Email sent to {email}")
+                send_email_to_subscriber(sub["email"], topic, final_report)
+                logger.info(f"✅ Email sent to {sub['email']} (lang={target_lang})")
             except Exception as e:
-                logger.error(f"❌ Email to {email} failed: {e}")
+                logger.error(f"❌ Email to {sub['email']} failed: {e}")
 
     logger.info("Subscription check complete.")
 
@@ -115,19 +124,28 @@ def run_once():
     sorted_due = sorted(due, key=itemgetter("topic"))
     for topic, group in groupby(sorted_due, key=itemgetter("topic")):
         subscribers = list(group)
-        emails = [s["email"] for s in subscribers]
-        logger.info(f"Running pipeline for topic '{topic}' → {len(emails)} subscriber(s)")
+        logger.info(f"Running pipeline for topic '{topic}' → {len(subscribers)} subscriber(s)")
 
         report_md = _run_for_topic(topic)
         if report_md is None:
             continue
 
-        for email in emails:
+        for sub in subscribers:
+            target_lang = sub.get("target_lang", "ko")
+            final_report = report_md
+
+            if target_lang != "en":
+                try:
+                    from services.translator import translate_to_TargetLang
+                    final_report = translate_to_TargetLang(report_md, target_lang)
+                except Exception as e:
+                    logger.warning(f"Translation skipped for {sub['email']}: {e}")
+
             try:
-                send_email_to_subscriber(email, topic, report_md)
-                logger.info(f"✅ Email sent to {email}")
+                send_email_to_subscriber(sub["email"], topic, final_report)
+                logger.info(f"✅ Email sent to {sub['email']} (lang={target_lang})")
             except Exception as e:
-                logger.error(f"❌ Email to {email} failed: {e}")
+                logger.error(f"❌ Email to {sub['email']} failed: {e}")
 
     logger.info("run_once complete.")
 

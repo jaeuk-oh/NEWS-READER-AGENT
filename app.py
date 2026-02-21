@@ -7,6 +7,16 @@ import db  # noqa: E402  (after load_dotenv so SUPABASE_* vars are available)
 
 st.set_page_config(page_title="News Briefing Subscription", page_icon="📰", layout="centered")
 
+LANGUAGES = {
+    "한국어": "ko",
+    "English (번역 없음)": "en",
+    "日本語": "ja",
+    "中文 (简体)": "zh-CN",
+    "Español": "es",
+    "Français": "fr",
+    "Deutsch": "de",
+}
+
 # ── Auth ──────────────────────────────────────────────────────────
 
 if not st.user.is_logged_in:
@@ -45,6 +55,8 @@ with tab_register:
 
     topic = st.text_input("키워드 (토픽)", placeholder="AI, AI-agent")
     schedule_time = st.time_input("발송 시간", value=None)
+    lang_label = st.selectbox("리포트 언어", list(LANGUAGES.keys()), index=0)
+    lang_code = LANGUAGES[lang_label]
 
     if st.button("구독하기", type="primary"):
         if not topic.strip():
@@ -54,8 +66,9 @@ with tab_register:
         else:
             time_str = schedule_time.strftime("%H:%M")
             try:
-                db.add_subscription(user_email, topic.strip(), time_str)
-                st.success(f"구독 완료! {time_str}에 '{topic.strip()}' 브리핑을 발송합니다.")
+                db.add_subscription(user_email, topic.strip(), time_str, lang_code)
+                st.session_state["just_registered"] = topic.strip()
+                st.rerun()
             except ValueError as e:
                 st.warning(str(e))
             except Exception as e:
@@ -65,6 +78,9 @@ with tab_register:
 
 with tab_manage:
     st.subheader("내 구독 관리")
+
+    if "just_registered" in st.session_state:
+        st.success(f"'{st.session_state.pop('just_registered')}' 구독이 등록되었습니다.")
 
     try:
         subs = db.get_subscriptions_by_email(user_email)
@@ -77,26 +93,39 @@ with tab_manage:
         for sub in subs:
             col1, col2, col3 = st.columns([3, 1, 1])
             status = "✅ 활성" if sub["is_active"] else "⏸️ 비활성"
-            col1.write(f"**{sub['topic']}** — {sub['schedule_time']} ({status})")
+            lang = sub.get("target_lang", "ko")
+            col1.write(f"**{sub['topic']}** — {sub['schedule_time']} | {lang} ({status})")
 
             if sub["is_active"]:
                 if col2.button("비활성", key=f"deact_{sub['id']}"):
                     try:
                         db.deactivate_subscription(sub["id"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-                    st.rerun()
             else:
                 if col2.button("활성화", key=f"act_{sub['id']}"):
                     try:
                         db.activate_subscription(sub["id"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-                    st.rerun()
 
-            if col3.button("삭제", key=f"del_{sub['id']}"):
-                try:
-                    db.delete_subscription(sub["id"])
-                except Exception as e:
-                    st.error(f"오류: {e}")
-                st.rerun()
+            confirm_key = f"confirm_del_{sub['id']}"
+            if not st.session_state.get(confirm_key):
+                if col3.button("삭제", key=f"del_{sub['id']}"):
+                    st.session_state[confirm_key] = True
+                    st.rerun()
+            else:
+                st.warning(f"**{sub['topic']}** 구독을 삭제할까요?")
+                c1, c2 = st.columns(2)
+                if c1.button("확인", key=f"confirm_{sub['id']}", type="primary"):
+                    try:
+                        db.delete_subscription(sub["id"])
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"오류: {e}")
+                if c2.button("취소", key=f"cancel_{sub['id']}"):
+                    st.session_state.pop(confirm_key, None)
+                    st.rerun()
