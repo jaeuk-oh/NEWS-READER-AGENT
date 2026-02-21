@@ -67,7 +67,8 @@ with tab_register:
             time_str = schedule_time.strftime("%H:%M")
             try:
                 db.add_subscription(user_email, topic.strip(), time_str, lang_code)
-                st.success(f"구독 완료! {time_str}에 '{topic.strip()}' 브리핑을 발송합니다.")
+                st.session_state["just_registered"] = topic.strip()
+                st.rerun()
             except ValueError as e:
                 st.warning(str(e))
             except Exception as e:
@@ -77,6 +78,9 @@ with tab_register:
 
 with tab_manage:
     st.subheader("내 구독 관리")
+
+    if "just_registered" in st.session_state:
+        st.success(f"'{st.session_state.pop('just_registered')}' 구독이 등록되었습니다.")
 
     try:
         subs = db.get_subscriptions_by_email(user_email)
@@ -96,20 +100,32 @@ with tab_manage:
                 if col2.button("비활성", key=f"deact_{sub['id']}"):
                     try:
                         db.deactivate_subscription(sub["id"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-                    st.rerun()
             else:
                 if col2.button("활성화", key=f"act_{sub['id']}"):
                     try:
                         db.activate_subscription(sub["id"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-                    st.rerun()
 
-            if col3.button("삭제", key=f"del_{sub['id']}"):
-                try:
-                    db.delete_subscription(sub["id"])
-                except Exception as e:
-                    st.error(f"오류: {e}")
-                st.rerun()
+            confirm_key = f"confirm_del_{sub['id']}"
+            if not st.session_state.get(confirm_key):
+                if col3.button("삭제", key=f"del_{sub['id']}"):
+                    st.session_state[confirm_key] = True
+                    st.rerun()
+            else:
+                st.warning(f"**{sub['topic']}** 구독을 삭제할까요?")
+                c1, c2 = st.columns(2)
+                if c1.button("확인", key=f"confirm_{sub['id']}", type="primary"):
+                    try:
+                        db.delete_subscription(sub["id"])
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"오류: {e}")
+                if c2.button("취소", key=f"cancel_{sub['id']}"):
+                    st.session_state.pop(confirm_key, None)
+                    st.rerun()
