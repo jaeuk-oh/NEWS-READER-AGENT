@@ -29,6 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 REPORT_FILE = "output/final_report.md"
+HARVEST_FILE = "output/content_harvest.md"
 
 
 def _run_for_topic(topic: str) -> str | None:
@@ -45,6 +46,15 @@ def _run_for_topic(topic: str) -> str | None:
         return None
 
     try:
+        with open(HARVEST_FILE, "r", encoding="utf-8") as f:
+            harvest = f.read()
+        if "Articles after filtering: 0" in harvest:
+            logger.warning(f"⚠️ No articles found for topic '{topic}'. Skipping email.")
+            return None
+    except FileNotFoundError:
+        pass
+
+    try:
         with open(REPORT_FILE, "r", encoding="utf-8") as f:
             report_md = f.read()
     except FileNotFoundError:
@@ -53,9 +63,9 @@ def _run_for_topic(topic: str) -> str | None:
 
     # Optional translation
     try:
-        from services.translator import translate_to_korean
+        from services.translator import translate_to_TargetLang
 
-        report_md = translate_to_korean(report_md)
+        report_md = translate_to_TargetLang(report_md)
         logger.info(f"Report translated for topic '{topic}'.")
     except Exception as e:
         logger.warning(f"Translation skipped for '{topic}': {e}")
