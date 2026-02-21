@@ -83,20 +83,20 @@ with tab_manage:
                 if col2.button("비활성", key=f"deact_{sub['id']}"):
                     try:
                         db.deactivate_subscription(sub["id"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-                    st.rerun()
             else:
                 if col2.button("활성화", key=f"act_{sub['id']}"):
                     try:
                         db.activate_subscription(sub["id"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"오류: {e}")
-                    st.rerun()
 
             if col3.button("삭제", key=f"del_{sub['id']}"):
                 try:
                     db.delete_subscription(sub["id"])
+                    st.rerun()
                 except Exception as e:
                     st.error(f"오류: {e}")
-                st.rerun()

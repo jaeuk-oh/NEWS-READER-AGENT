@@ -37,7 +37,5 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          TRANSLATION_ENABLED: ${{ secrets.TRANSLATION_ENABLED }}
-          TRANSLATION_TARGET_LANG: ${{ secrets.TRANSLATION_TARGET_LANG }}
           TZ: Asia/Seoul
         run: uv run python -c "from subscription_scheduler import run_once; run_once()"
