@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-import db
+from backend import db
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
