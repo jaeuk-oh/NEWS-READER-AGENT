@@ -3,11 +3,14 @@ import dotenv
 
 dotenv.load_dotenv()
 
-from crewai import Agent, Task, Crew
+from crewai import Agent, Task, Crew, LLM
 from crewai.project import CrewBase, agent, task, crew
 from tools import web_search_tool
 
 OUTPUT_FILE = "output/final_report.md"
+
+_llm_mini = LLM(model="gpt-4o-mini")
+_llm_full = LLM(model="gpt-4o")
 
 @CrewBase
 class News_Reader_Agent:
@@ -18,20 +21,23 @@ class News_Reader_Agent:
     def news_hunter_agent(self):
         return Agent(
             config=self.agents_config['news_hunter_agent'],
-            tools=[web_search_tool]
+            tools=[web_search_tool],
+            llm=_llm_mini,
         )
 
     @agent
     def summarizer_agent(self):
         return Agent(
             config=self.agents_config['summarizer_agent'],
-            tools=[web_search_tool]
+            tools=[web_search_tool],
+            llm=_llm_mini,
         )
 
     @agent
     def curator_agent(self):
         return Agent(
             config=self.agents_config['curator_agent'],
+            llm=_llm_full,
         )
 
     @task

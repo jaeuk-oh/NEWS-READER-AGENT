@@ -27,8 +27,8 @@ def web_search_tool(query: str):
         url = result["url"]
         markdown = result["markdown"]
 
-        cleaned = re.sub(r"\\+|\n+", "", markdown).strip()
-        cleaned = re.sub(r"\[[^\]]+\]\([^\)]+\)|https?://[^\s]+", "", cleaned)
+        cleaned = re.sub(r"\n{3,}", "\n\n", markdown).strip()
+        cleaned = re.sub(r"\\{2,}", "", cleaned)
 
         cleaned_result = {
             "title": title,

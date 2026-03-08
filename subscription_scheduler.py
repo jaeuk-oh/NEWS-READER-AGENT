@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 REPORT_FILE = "output/final_report.md"
 HARVEST_FILE = "output/content_harvest.md"
+MIN_REPORT_LENGTH = 300
 
 
 def _run_for_topic(topic: str) -> str | None:
@@ -59,6 +60,13 @@ def _run_for_topic(topic: str) -> str | None:
             report_md = f.read()
     except FileNotFoundError:
         logger.error(f"❌ {REPORT_FILE} not found after crew run.")
+        return None
+
+    if len(report_md.strip()) < MIN_REPORT_LENGTH:
+        logger.error(
+            f"❌ Report too short ({len(report_md.strip())} chars) for topic '{topic}'. "
+            f"Likely no articles found. Skipping email."
+        )
         return None
 
     # Optional translation
