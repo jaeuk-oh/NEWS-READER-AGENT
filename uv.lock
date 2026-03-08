@@ -708,23 +708,6 @@ wheels = [
 ]
 
 [[package]]
-name = "firecrawl-py"
-version = "2.16.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "nest-asyncio" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d3/42/d3745b0385a7a239d6f7e4622474328d259a4ccb262a356e06ce31785e90/firecrawl_py-2.16.3.tar.gz", hash = "sha256:5fd063ef4acc4c4be62648f1e11467336bc127780b3afc28d39078a012e6a14c", size = 39916, upload-time = "2025-07-29T13:13:11.344Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/1c/7a0dbb920b52f38dd84c3f1aab814cecc4e41e535726b284e77942e2e1d8/firecrawl_py-2.16.3-py3-none-any.whl", hash = "sha256:94bb46af5e0df6c8ec414ac999a5355c0f5a46f15fd1cf5a02a3b31062db0aa8", size = 75606, upload-time = "2025-07-29T13:13:10.207Z" },
-]
-
-[[package]]
 name = "flatbuffers"
 version = "25.12.19"
 source = { registry = "https://pypi.org/simple" }
@@ -1612,15 +1595,6 @@ wheels = [
 ]
 
 [[package]]
-name = "nest-asyncio"
-version = "1.6.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/83/f8/51569ac65d696c8ecbee95938f89d4abf00f47d58d48f6fbabfe8f0baefe/nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe", size = 7418, upload-time = "2024-01-21T14:25:19.227Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/c4/c2971a3ba4c6103a3d10c4b0f24f461ddc027f0f09763220cf35ca1401b3/nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c", size = 5195, upload-time = "2024-01-21T14:25:17.223Z" },
-]
-
-[[package]]
 name = "news-reader-agent"
 version = "0.1.0"
 source = { virtual = "." }
@@ -1628,12 +1602,12 @@ dependencies = [
     { name = "authlib" },
     { name = "crewai", extra = ["tools"] },
     { name = "deep-translator" },
-    { name = "firecrawl-py" },
     { name = "markdown2" },
     { name = "python-dotenv" },
     { name = "schedule" },
     { name = "streamlit" },
     { name = "supabase" },
+    { name = "tavily-python" },
 ]
 
 [package.metadata]
@@ -1641,12 +1615,12 @@ requires-dist = [
     { name = "authlib", specifier = ">=1.3.2" },
     { name = "crewai", extras = ["tools"], specifier = ">=0.152.0" },
     { name = "deep-translator", specifier = ">=1.11.4" },
-    { name = "firecrawl-py", specifier = "==2.16.3" },
     { name = "markdown2", specifier = ">=2.5.4" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "schedule", specifier = ">=1.2.0" },
     { name = "streamlit", specifier = ">=1.54.0" },
     { name = "supabase", specifier = ">=2.16.0" },
+    { name = "tavily-python", specifier = ">=0.5.0" },
 ]
 
 [[package]]
@@ -3022,6 +2996,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/83/d3/803453b36afefb7c2bb238361cd4ae6125a569b4db67cd9e79846ba2d68c/sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517", size = 7793921, upload-time = "2025-04-27T18:05:01.611Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5", size = 6299353, upload-time = "2025-04-27T18:04:59.103Z" },
+]
+
+[[package]]
+name = "tavily-python"
+version = "0.7.22"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "requests" },
+    { name = "tiktoken" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6e/87/995a176c81887000a14556b810be986530d723224a71e10ccb312b480637/tavily_python-0.7.22.tar.gz", hash = "sha256:050c0113309b516f58fbdc484d6091efa7ce6c016c2a2cd9f111581269f00dfe", size = 22393, upload-time = "2026-02-26T15:05:00.794Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/43/9f977f236c641c7903939788b088c3575e9a5dba0b9ca9a5586a1f02bb9e/tavily_python-0.7.22-py3-none-any.whl", hash = "sha256:25d05f02be3fa2508ff1c114196b714e069d75312c26ddf747c9f5bdc617bbb3", size = 18136, upload-time = "2026-02-26T15:04:59.608Z" },
 ]
 
 [[package]]

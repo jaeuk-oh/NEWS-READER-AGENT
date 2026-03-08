@@ -1,41 +1,47 @@
 import os, re
 
 from crewai.tools import tool
-from firecrawl import FirecrawlApp, ScrapeOptions
+from tavily import TavilyClient
 
 @tool
 def web_search_tool(query: str):
     """Search the web for news articles using the given query and return cleaned results with title, url, and markdown content."""
-    app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+    api_key = os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        return "Error: TAVILY_API_KEY is not set. Cannot perform search."
 
-    response = app.search(
-        query=query,
-        limit=5,
-        scrape_options=ScrapeOptions(
-            formats=["markdown"],
-        ),
-    )
+    try:
+        client = TavilyClient(api_key=api_key)
+        response = client.search(
+            query=query,
+            search_depth="advanced",
+            topic="news",
+            max_results=5,
+            include_raw_content=True,
+        )
+    except Exception as e:
+        return f"Error: search request failed — {e}. Do not retry this query."
 
-    if not response.success:
-        return "Error using tool."
+    results = response.get("results")
+    if not results:
+        return "No articles found for this query."
 
     cleaned_chunks = []
 
-    for result in response.data:
+    for result in results:
+        try:
+            title = result.get("title", "")
+            url = result.get("url", "")
+            content = result.get("raw_content") or result.get("content") or ""
 
-        title = result["title"]
-        url = result["url"]
-        markdown = result["markdown"]
+            cleaned = re.sub(r"\n{3,}", "\n\n", content).strip()
+            cleaned = re.sub(r"\\{2,}", "", cleaned)
 
-        cleaned = re.sub(r"\n{3,}", "\n\n", markdown).strip()
-        cleaned = re.sub(r"\\{2,}", "", cleaned)
+            cleaned_chunks.append({"title": title, "url": url, "markdown": cleaned})
+        except Exception:
+            continue
 
-        cleaned_result = {
-            "title": title,
-            "url": url,
-            "markdown": cleaned,
-        }
-
-        cleaned_chunks.append(cleaned_result)
+    if not cleaned_chunks:
+        return "No valid articles found after processing."
 
     return cleaned_chunks

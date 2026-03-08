@@ -38,6 +38,8 @@ class News_Reader_Agent:
         return Agent(
             config=self.agents_config['curator_agent'],
             llm=_llm_full,
+            max_iter=8,
+            max_retry_limit=1,
         )
 
     @task
