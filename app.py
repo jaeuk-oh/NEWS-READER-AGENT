@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import db  # noqa: E402  (after load_dotenv so SUPABASE_* vars are available)
+from backend import db  # noqa: E402  (after load_dotenv so SUPABASE_* vars are available)
 
 st.set_page_config(page_title="News Briefing Subscription", page_icon="📰", layout="centered")
 

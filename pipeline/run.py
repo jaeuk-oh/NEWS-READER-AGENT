@@ -5,7 +5,7 @@ dotenv.load_dotenv()
 
 from crewai import Agent, Task, Crew, LLM
 from crewai.project import CrewBase, agent, task, crew
-from tools import web_search_tool
+from pipeline.tools import web_search_tool
 
 OUTPUT_FILE = "output/final_report.md"
 

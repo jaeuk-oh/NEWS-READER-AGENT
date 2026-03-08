@@ -39,7 +39,7 @@ def _run_for_topic(topic: str) -> str | None:
     Returns None on failure or when no articles were found.
     """
     try:
-        from main import run_crew
+        from pipeline.run import run_crew
 
         run_crew(topic)
     except Exception as e:
@@ -81,7 +81,7 @@ def _run_for_topic(topic: str) -> str | None:
 
     # Optional translation
     try:
-        from services.translator import translate_to_TargetLang
+        from backend.services.translator import translate_to_TargetLang
 
         report_md = translate_to_TargetLang(report_md)
         logger.info(f"Report translated for topic '{topic}'.")
@@ -93,8 +93,8 @@ def _run_for_topic(topic: str) -> str | None:
 
 def check_and_run():
     """Check DB for due subscriptions and dispatch pipelines."""
-    import db
-    from services.notifier import send_email_to_subscriber
+    from backend import db
+    from backend.services.notifier import send_email_to_subscriber
 
     now_hhmm = datetime.now().strftime("%H:%M")
     due = db.get_due_subscriptions(now_hhmm)
@@ -120,7 +120,7 @@ def check_and_run():
 
             if target_lang != "en":
                 try:
-                    from services.translator import translate_to_TargetLang
+                    from backend.services.translator import translate_to_TargetLang
                     final_report = translate_to_TargetLang(report_md, target_lang)
                 except Exception as e:
                     logger.warning(f"Translation skipped for {sub['email']}: {e}")
@@ -136,8 +136,8 @@ def check_and_run():
 
 def run_once():
     """One-shot mode for GitHub Actions: process all subscriptions due this hour."""
-    import db
-    from services.notifier import send_email_to_subscriber
+    from backend import db
+    from backend.services.notifier import send_email_to_subscriber
 
     now = datetime.now()
     hour = now.strftime("%H")
@@ -164,7 +164,7 @@ def run_once():
 
             if target_lang != "en":
                 try:
-                    from services.translator import translate_to_TargetLang
+                    from backend.services.translator import translate_to_TargetLang
                     final_report = translate_to_TargetLang(report_md, target_lang)
                 except Exception as e:
                     logger.warning(f"Translation skipped for {sub['email']}: {e}")
