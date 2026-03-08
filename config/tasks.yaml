@@ -33,8 +33,23 @@ content_harvesting_task:
       - Articles older than 48 hours (unless specifically relevant to ongoing developments)
       - Pages that failed to scrape or returned no substantial content
 
-    6. If fewer than 5 articles pass filtering, run additional searches with
-      different phrasings before finalizing.
+    6. If fewer than 3 articles pass all filters, apply the following fallback
+      strategy in order — stop as soon as you have at least 3 articles:
+
+      Step A — Broader phrasing: strip adjectives/modifiers from the topic
+        and search the core concept only.
+        e.g. "AI agent latest trends 2025" → "AI agent"
+
+      Step B — English equivalent: if the topic contains non-English terms,
+        translate them to English and retry with the English version.
+
+      Step C — Extended time window: repeat the original queries but accept
+        articles up to 7 days old instead of 48 hours.
+        Prepend "[older context]" label to any article beyond 48 h.
+
+      If still 0 articles after all three steps, output the harvest document
+      with "Articles after filtering: 0" clearly stated in the Collection
+      Summary and stop — do not fabricate content.
 
     7. Classify each article into a topic category (e.g. AI/ML, Industry & Business,
       Policy & Regulation, Technology, Research, etc.)

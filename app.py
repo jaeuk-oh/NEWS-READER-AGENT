@@ -111,21 +111,9 @@ with tab_manage:
                     except Exception as e:
                         st.error(f"오류: {e}")
 
-            confirm_key = f"confirm_del_{sub['id']}"
-            if not st.session_state.get(confirm_key):
-                if col3.button("삭제", key=f"del_{sub['id']}"):
-                    st.session_state[confirm_key] = True
+            if col3.button("삭제", key=f"del_{sub['id']}"):
+                try:
+                    db.delete_subscription(sub["id"])
                     st.rerun()
-            else:
-                st.warning(f"**{sub['topic']}** 구독을 삭제할까요?")
-                c1, c2 = st.columns(2)
-                if c1.button("확인", key=f"confirm_{sub['id']}", type="primary"):
-                    try:
-                        db.delete_subscription(sub["id"])
-                        st.session_state.pop(confirm_key, None)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"오류: {e}")
-                if c2.button("취소", key=f"cancel_{sub['id']}"):
-                    st.session_state.pop(confirm_key, None)
-                    st.rerun()
+                except Exception as e:
+                    st.error(f"오류: {e}")
