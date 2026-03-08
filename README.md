@@ -124,3 +124,16 @@ if st.button("로그아웃"):
 > 관련 커밋: `575dc58` (fix: resolve Google OAuth auto-redirect and infinite login loop)
 
 ---
+
+## "Why?" 질문 대비 To-Do List
+
+* [ ] **왜 CrewAI를 사용했는가**
+* [ ] **왜 Agent 구조로 설계했는가**
+* [ ] **왜 FastAPI 백엔드를 분리했는가**
+* [ ] **왜 Scheduler가 필요한가**
+* [ ] **왜 뉴스 deduplication이 필요한가**
+* [ ] **왜 뉴스 히스토리를 저장하는가**
+* [ ] **왜 이메일 전달 방식을 선택했는가**
+* [ ] **LLM hallucination 대응 방법**
+* [ ] **LLM 비용 최적화 전략**
+* [ ] **서비스 확장 시 아키텍처 대응 방법**
