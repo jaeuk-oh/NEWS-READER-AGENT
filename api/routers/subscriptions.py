@@ -13,10 +13,14 @@ router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 
 
+_VALID_LANGS = {"ko", "en", "ja", "zh-CN", "es", "fr", "de"}
+
+
 class SubscriptionCreate(BaseModel):
     email: EmailStr
     topic: str = Field(min_length=1, max_length=200)
     schedule_time: str
+    target_lang: str = "ko"
 
     @field_validator("schedule_time")
     @classmethod
@@ -28,6 +32,13 @@ class SubscriptionCreate(BaseModel):
             raise ValueError("schedule_time out of range")
         return v
 
+    @field_validator("target_lang")
+    @classmethod
+    def validate_lang(cls, v: str) -> str:
+        if v not in _VALID_LANGS:
+            raise ValueError(f"target_lang must be one of {sorted(_VALID_LANGS)}")
+        return v
+
 
 class SubscriptionUpdate(BaseModel):
     is_active: bool
@@ -36,7 +47,7 @@ class SubscriptionUpdate(BaseModel):
 @router.post("", status_code=201)
 def create_subscription(body: SubscriptionCreate) -> dict:
     try:
-        return db.add_subscription(body.email, body.topic, body.schedule_time)
+        return db.add_subscription(body.email, body.topic, body.schedule_time, body.target_lang)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
 
