@@ -126,7 +126,9 @@ def check_and_run():
                     logger.warning(f"Translation skipped for {sub['email']}: {e}")
 
             try:
-                send_email_to_subscriber(sub["email"], topic, final_report)
+                send_email_to_subscriber(
+                    sub["email"], topic, final_report, sub["unsubscribe_token"]
+                )
                 logger.info(f"✅ Email sent to {sub['email']} (lang={target_lang})")
             except Exception as e:
                 logger.error(f"❌ Email to {sub['email']} failed: {e}")
@@ -170,7 +172,9 @@ def run_once():
                     logger.warning(f"Translation skipped for {sub['email']}: {e}")
 
             try:
-                send_email_to_subscriber(sub["email"], topic, final_report)
+                send_email_to_subscriber(
+                    sub["email"], topic, final_report, sub["unsubscribe_token"]
+                )
                 logger.info(f"✅ Email sent to {sub['email']} (lang={target_lang})")
             except Exception as e:
                 logger.error(f"❌ Email to {sub['email']} failed: {e}")
