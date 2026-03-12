@@ -18,3 +18,11 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "pydantic[email]>=2.0.0",
 ]
+
+# 개발/테스트용 의존성 (uv add --dev 로 설치)
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",       # FastAPI TestClient가 내부적으로 사용
+    "pytest-mock>=3.14.0", # MagicMock 기반 모킹 픽스처
+]
