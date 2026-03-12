@@ -72,7 +72,7 @@ uv run python subscription_scheduler.py
 | `OPENAI_API_KEY` | OpenAI API 키 (CrewAI LLM 백엔드) | ✅ |
 | `FIRECRAWL_API_KEY` | Firecrawl API 키 (웹 검색·스크래핑) | ✅ |
 | `SUPABASE_URL` | Supabase 프로젝트 URL | ✅ |
-| `SUPABASE_KEY` | Supabase anon/service 키 | ✅ |
+| `SUPABASE_KEY` | Supabase **service_role** 키 (백엔드 전용, 절대 프론트에 노출 금지) | ✅ |
 | `GMAIL_SENDER` | 발신자 Gmail 주소 | ✅ |
 | `GMAIL_APP_PASSWORD` | Gmail 앱 비밀번호 (16자리) | ✅ |
 | `TRANSLATION_ENABLED` | `true` 로 설정 시 한국어 번역 활성화 | 선택 |
@@ -80,6 +80,16 @@ uv run python subscription_scheduler.py
 | `NEWS_TOPIC` | `main.py` 직접 실행 시 기본 토픽 | 선택 |
 
 > **Google OAuth** 설정은 `.streamlit/secrets.toml`에 별도로 구성한다.
+
+### 프론트엔드 환경변수 (`frontend/.env`)
+
+| 변수명 | 값 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL (루트와 동일) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase **anon** 키 (브라우저 노출 안전) |
+| `NEXT_PUBLIC_API_URL` | Render 백엔드 URL |
+
+> 프론트는 Supabase를 **Auth 전용**으로만 사용. DB 접근은 FastAPI 백엔드를 통해서만 처리.
 
 ---
 
@@ -125,15 +135,25 @@ if st.button("로그아웃"):
 
 ---
 
-## "Why?" 질문 대비 To-Do List
+## 기술 선택 이유
 
-* [ ] **왜 CrewAI를 사용했는가**
-* [ ] **왜 Agent 구조로 설계했는가**
-* [ ] **왜 FastAPI 백엔드를 분리했는가**
-* [ ] **왜 Scheduler가 필요한가**
-* [ ] **왜 뉴스 deduplication이 필요한가**
-* [ ] **왜 뉴스 히스토리를 저장하는가**
-* [ ] **왜 이메일 전달 방식을 선택했는가**
-* [ ] **LLM hallucination 대응 방법**
-* [ ] **LLM 비용 최적화 전략**
-* [ ] **서비스 확장 시 아키텍처 대응 방법**
+### 왜 CrewAI인가
+뉴스 처리는 수집 → 요약 → 큐레이션의 독립적인 3단계로 분리된다. 단일 LLM 호출로 세 작업을 한 번에 처리하면 컨텍스트가 너무 길어져 품질이 떨어진다. CrewAI는 각 단계를 전용 Agent에 위임하고 결과물을 파이프라인으로 연결하기 때문에, 각 Agent가 하나의 역할에만 집중할 수 있다.
+
+### 왜 Supabase인가
+PostgreSQL 기반의 managed DB + Auth를 프리티어에서 즉시 사용할 수 있다. 직접 PostgreSQL 서버를 운영하거나 Firebase를 선택하는 것보다 설정 비용이 낮고, Row Level Security(RLS)로 데이터 접근 제어를 DB 레벨에서 처리할 수 있다.
+
+### 왜 Supabase를 쓰면서 FastAPI 서버를 별도로 두는가
+Supabase에 프론트엔드에서 직접 접근하면 `service_role` 키(RLS 우회 권한)가 브라우저에 노출된다. FastAPI를 중간에 두면 민감한 키는 서버에만 존재하고, 비즈니스 로직(구독 중복 검사, 스케줄러 트리거 등)을 한 곳에서 관리할 수 있다. 프론트는 Supabase를 Auth 전용으로만 사용한다.
+
+### 왜 이메일 발송인가
+뉴스 브리핑은 정해진 시각에 푸시되어야 하는 비동기 콘텐츠다. 앱 푸시 알림은 모바일 앱이 필요하고, 웹소켓은 브라우저가 열려 있어야 한다. 이메일은 수신자가 오프라인이어도 전달되고, 별도 앱 설치 없이 모든 기기에서 읽을 수 있다.
+
+### 왜 Next.js + TypeScript인가
+FastAPI 백엔드가 타입이 있는 Pydantic 모델을 쓰기 때문에, 프론트도 TypeScript로 맞추면 API 응답 타입을 공유할 수 있다. Next.js App Router의 Server Components를 쓰면 구독 목록을 클라이언트 waterfall 없이 서버에서 직접 fetch하여 초기 렌더링 속도를 높인다.
+
+### 왜 Render인가 (백엔드 배포)
+FastAPI + 스케줄러를 함께 돌리려면 상시 구동 서버가 필요하다. Vercel은 서버리스(함수 단위)라 스케줄러 상시 실행이 불가능하다. Render의 Web Service는 컨테이너를 상시 유지하므로 `subscription_scheduler.py`가 계속 실행된다.
+
+### 왜 스케줄러가 필요한가
+구독자마다 설정 시각이 다르고, 서버가 재시작돼도 예약이 유지되어야 한다. DB에 `schedule_time`을 저장하고 매분 체크하는 방식은 외부 큐(Celery, SQS 등) 없이도 동작하며, 스케일이 작은 MVP 단계에서 가장 단순한 구현이다.
