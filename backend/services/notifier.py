@@ -135,7 +135,7 @@ def send_email_to_subscriber(
     msg.attach(MIMEText(report_md, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
         server.ehlo()
         server.starttls()
         server.ehlo()
