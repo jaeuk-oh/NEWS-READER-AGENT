@@ -4,6 +4,7 @@ Gmail SMTP를 사용해 뉴스 브리핑을 구독자에게 전송한다.
 HTML 본문은 inline CSS로 스타일링되며, 구독 취소 링크를 포함한다.
 """
 import os
+import socket
 import smtplib
 import logging
 from email.mime.text import MIMEText
@@ -135,7 +136,10 @@ def send_email_to_subscriber(
     msg.attach(MIMEText(report_md, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as server:
+    # Render 컨테이너는 IPv6 라우팅이 없는 경우가 있어 [Errno 101] ENETUNREACH 발생.
+    # getaddrinfo(AF_INET)으로 IPv4 주소를 명시적으로 선택한다.
+    ipv4 = socket.getaddrinfo(SMTP_HOST, SMTP_PORT, socket.AF_INET)[0][4][0]
+    with smtplib.SMTP_SSL(ipv4, SMTP_PORT, timeout=30) as server:
         server.login(sender, password)
         server.sendmail(sender, recipient, msg.as_string())
 
