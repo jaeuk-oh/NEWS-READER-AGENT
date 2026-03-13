@@ -3,6 +3,9 @@ import dotenv
 
 dotenv.load_dotenv()
 
+# Disable CrewAI telemetry/tracing prompt — prevents interactive hang in non-TTY environments
+os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
+
 from crewai import Agent, Task, Crew, LLM
 from crewai.project import CrewBase, agent, task, crew
 from pipeline.tools import web_search_tool
