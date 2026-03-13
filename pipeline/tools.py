@@ -37,6 +37,11 @@ def web_search_tool(query: str):
             cleaned = re.sub(r"\n{3,}", "\n\n", content).strip()
             cleaned = re.sub(r"\\{2,}", "", cleaned)
 
+            # Truncate to 1500 words to prevent LLM context overflow
+            words = cleaned.split()
+            if len(words) > 1500:
+                cleaned = " ".join(words[:1500])
+
             cleaned_chunks.append({"title": title, "url": url, "markdown": cleaned})
         except Exception:
             continue
