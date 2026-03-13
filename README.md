@@ -115,8 +115,16 @@ uv run pytest tests/
 
 ## Render 배포 시 주의사항
 
-### ★ SMTP 포트: 587 불가, 465 사용
-Render 서버는 아웃바운드 포트 587(STARTTLS)이 차단되어 있다. `smtplib.SMTP_SSL` + 포트 465를 사용해야 한다. 포트 587을 사용하면 TCP 연결이 성립되지 않고 `[Errno 101] Network is unreachable` 에러가 발생한다.
+### ★ SMTP 포트 + IPv4 강제
+Render 서버는 아웃바운드 포트 587(STARTTLS)이 차단되어 있다. `smtplib.SMTP_SSL` + 포트 465를 사용해야 한다.
+
+추가로 Render 컨테이너는 IPv6 라우팅이 없는 경우가 있어, Python이 `smtp.gmail.com`을 IPv6로 resolve하면 `[Errno 101] Network is unreachable`이 발생한다. `socket.getaddrinfo(AF_INET)`으로 IPv4 주소를 명시적으로 선택해야 한다.
+
+```python
+ipv4 = socket.getaddrinfo(SMTP_HOST, SMTP_PORT, socket.AF_INET)[0][4][0]
+with smtplib.SMTP_SSL(ipv4, SMTP_PORT, timeout=30) as server:
+    ...
+```
 
 ### ★ CrewAI tracing 프롬프트 hang
 CrewAI는 초기 실행 시 tracing 설정 파일(`~/.config/crewai/settings.json`)이 없으면 사용자 입력을 기다린다. Render의 백그라운드 스레드(non-TTY) 환경에서는 이 프롬프트가 무한 대기 상태가 된다. 새 컨테이너 빌드 시마다 설정 파일이 초기화되므로 코드에서 직접 비활성화해야 한다.
