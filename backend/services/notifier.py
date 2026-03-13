@@ -15,7 +15,7 @@ import markdown2
 logger = logging.getLogger(__name__)
 
 SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_PORT = 465
 
 
 def _build_html(topic: str, today: str, content_html: str, unsubscribe_url: str) -> str:
@@ -135,10 +135,7 @@ def send_email_to_subscriber(
     msg.attach(MIMEText(report_md, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as server:
         server.login(sender, password)
         server.sendmail(sender, recipient, msg.as_string())
 
