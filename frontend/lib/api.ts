@@ -56,3 +56,23 @@ export async function deleteSubscription(id: string): Promise<void> {
   const res = await fetch(`${API_URL}/subscriptions/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("구독 삭제에 실패했습니다.");
 }
+
+export interface InstantRequest {
+  email: string;
+  topic: string;
+  target_lang: string;
+}
+
+// 일회성 즉시 발송
+export async function createInstantBriefing(data: InstantRequest): Promise<{ message: string }> {
+  const res = await fetch(`${API_URL}/subscriptions/instant`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail ?? "요청에 실패했습니다.");
+  }
+  return res.json();
+}

@@ -37,10 +37,10 @@ def _run_for_topic(topic: str) -> str | None:
     """Run the CrewAI pipeline for *topic* and return the raw English report markdown.
 
     Returns None on failure or when no articles were found.
+    Translation is handled per-subscriber in the caller.
     """
     try:
         from pipeline.run import run_crew
-
         run_crew(topic)
     except Exception as e:
         logger.error(f"❌ Crew failed for topic '{topic}': {e}")
@@ -49,44 +49,24 @@ def _run_for_topic(topic: str) -> str | None:
     # Zero-article guard: skip email if harvest found nothing
     try:
         with open(HARVEST_FILE, "r", encoding="utf-8") as f:
-            harvest = f.read()
-        if "Articles after filtering: 0" in harvest:
-            logger.warning(f"⚠️ No articles found for topic '{topic}'. Skipping email.")
-            return None
-    except FileNotFoundError:
-        pass
-
-    try:
-        with open(HARVEST_FILE, "r", encoding="utf-8") as f:
-            harvest = f.read()
-        if "Articles after filtering: 0" in harvest:
-            logger.warning(f"⚠️ No articles found for topic '{topic}'. Skipping email.")
-            return None
+            if "Articles after filtering: 0" in f.read():
+                logger.warning(f"⚠️ No articles found for topic '{topic}'. Skipping email.")
+                return None
     except FileNotFoundError:
         pass
 
     try:
         with open(REPORT_FILE, "r", encoding="utf-8") as f:
-            return f.read()
+            report_md = f.read()
     except FileNotFoundError:
         logger.error(f"❌ {REPORT_FILE} not found after crew run.")
         return None
 
     if len(report_md.strip()) < MIN_REPORT_LENGTH:
         logger.error(
-            f"❌ Report too short ({len(report_md.strip())} chars) for topic '{topic}'. "
-            f"Likely no articles found. Skipping email."
+            f"❌ Report too short ({len(report_md.strip())} chars) for topic '{topic}'. Skipping email."
         )
         return None
-
-    # Optional translation
-    try:
-        from backend.services.translator import translate_to_TargetLang
-
-        report_md = translate_to_TargetLang(report_md)
-        logger.info(f"Report translated for topic '{topic}'.")
-    except Exception as e:
-        logger.warning(f"Translation skipped for '{topic}': {e}")
 
     return report_md
 
