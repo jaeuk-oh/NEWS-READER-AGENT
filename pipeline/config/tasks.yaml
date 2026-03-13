@@ -24,16 +24,19 @@ content_harvesting_task:
 
     4. For each accepted article URL:
       - Use the scrape tool to extract the full article content
-      - Capture: title, source name, publication date, and the **complete article
-        body text**. Do not truncate or summarize the content at this stage —
-        the next stage depends on having the full text.
+      - Capture: title, source name, publication date, and the article body text.
+      - **Limit body text to the first 1500 words.** If the article is longer,
+        truncate after 1500 words — the key information is in the lead paragraphs.
 
     5. Filter out:
       - Articles shorter than 200 words
       - Articles older than 48 hours (unless specifically relevant to ongoing developments)
       - Pages that failed to scrape or returned no substantial content
 
-    6. If fewer than 3 articles pass all filters, apply the following fallback
+    6. **Select at most 7 articles** after filtering (highest relevance + credibility).
+      If more than 7 pass the filters, keep only the top 7.
+
+    7. If fewer than 3 articles pass all filters, apply the following fallback
       strategy in order — stop as soon as you have at least 3 articles:
 
       Step A — Broader phrasing: strip adjectives/modifiers from the topic
@@ -51,10 +54,10 @@ content_harvesting_task:
       with "Articles after filtering: 0" clearly stated in the Collection
       Summary and stop — do not fabricate content.
 
-    7. Classify each article into a topic category (e.g. AI/ML, Industry & Business,
+    8. Classify each article into a topic category (e.g. AI/ML, Industry & Business,
       Policy & Regulation, Technology, Research, etc.)
 
-    8. Score each article:
+    9. Score each article:
       - Credibility (1-10): based on source reputation and content quality
       - Relevance (1-10): based on how well it matches {topic}
 

@@ -37,7 +37,7 @@ class News_Reader_Agent:
     def curator_agent(self):
         return Agent(
             config=self.agents_config['curator_agent'],
-            llm=_llm_full,
+            llm=_llm_mini,
             max_iter=8,
             max_retry_limit=1,
         )
