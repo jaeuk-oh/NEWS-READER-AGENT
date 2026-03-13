@@ -113,6 +113,27 @@ uv run pytest tests/
 
 ---
 
+## Render 배포 시 주의사항
+
+### ★ SMTP 포트: 587 불가, 465 사용
+Render 서버는 아웃바운드 포트 587(STARTTLS)이 차단되어 있다. `smtplib.SMTP_SSL` + 포트 465를 사용해야 한다. 포트 587을 사용하면 TCP 연결이 성립되지 않고 `[Errno 101] Network is unreachable` 에러가 발생한다.
+
+### ★ CrewAI tracing 프롬프트 hang
+CrewAI는 초기 실행 시 tracing 설정 파일(`~/.config/crewai/settings.json`)이 없으면 사용자 입력을 기다린다. Render의 백그라운드 스레드(non-TTY) 환경에서는 이 프롬프트가 무한 대기 상태가 된다. 새 컨테이너 빌드 시마다 설정 파일이 초기화되므로 코드에서 직접 비활성화해야 한다.
+
+```python
+# pipeline/run.py — crewai import 전에 설정
+os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
+```
+
+### ★ LLM 컨텍스트 128K 초과
+`content_harvesting_task`가 기사 전문을 제한 없이 수집하면 `summarization_task` 입력이 128K 토큰을 초과한다. CrewAI 내부 폴백(자동 요약)이 실행되어 수십 분이 소요되거나 Render가 프로세스를 종료한다. 기사 수와 본문 길이를 제한해야 한다.
+
+- 기사 최대 **7개** 선택
+- 기사 본문 최대 **1500단어** 제한
+
+---
+
 ## 기술 선택 이유
 
 ### 왜 CrewAI인가
