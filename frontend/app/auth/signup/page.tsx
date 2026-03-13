@@ -1,17 +1,15 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleGoogleLogin() {
+  async function handleGoogleSignup() {
     setError("");
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -30,13 +28,13 @@ export default function LoginPage() {
     <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden">
         <div className="p-8 sm:p-12">
-          <h3 className="text-3xl font-bold font-serif mb-2">반가워요!</h3>
-          <p className="text-slate-500 mb-8">오늘의 통찰을 확인하려면 로그인하세요.</p>
+          <h3 className="text-3xl font-bold font-serif mb-2">시작해볼까요!</h3>
+          <p className="text-slate-500 mb-8">Google 계정으로 바로 시작하세요.</p>
 
           {error && <p role="alert" className="text-sm text-red-500 mb-4">{error}</p>}
 
           <button
-            onClick={handleGoogleLogin}
+            onClick={handleGoogleSignup}
             disabled={loading}
             className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-50 transition active:scale-[0.98]"
           >
@@ -46,14 +44,18 @@ export default function LoginPage() {
               <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#fff" fillOpacity=".9"/>
               <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#fff" fillOpacity=".9"/>
             </svg>
-            {loading ? "리다이렉트 중..." : "Google로 로그인"}
+            {loading ? "리다이렉트 중..." : "Google로 회원가입"}
           </button>
 
           <p className="mt-8 text-center text-sm text-slate-500">
-            계정이 없으신가요?{" "}
-            <Link href="/auth/signup" className="text-indigo-600 font-bold hover:underline">
-              회원가입
+            이미 계정이 있으신가요?{" "}
+            <Link href="/auth/login" className="text-indigo-600 font-bold hover:underline">
+              로그인
             </Link>
+          </p>
+
+          <p className="mt-4 text-center text-xs text-slate-400">
+            가입하면 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.
           </p>
         </div>
       </div>
