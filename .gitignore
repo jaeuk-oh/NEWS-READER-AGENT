@@ -17,3 +17,6 @@ wheels/
 
 # Generated pipeline outputs
 output/*.md
+
+# Claude Code local settings
+.claude/
