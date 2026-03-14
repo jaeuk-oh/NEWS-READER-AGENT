@@ -133,10 +133,16 @@ os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
 ```
 
 ### ★ LLM 컨텍스트 128K 초과
-`content_harvesting_task`가 기사 전문을 제한 없이 수집하면 `summarization_task` 입력이 128K 토큰을 초과한다. CrewAI 내부 폴백(자동 요약)이 실행되어 수십 분이 소요되거나 Render가 프로세스를 종료한다. 기사 수와 본문 길이를 제한해야 한다.
+`content_harvesting_task`는 3~4개 쿼리를 실행하고 각 쿼리마다 여러 기사를 스크래핑한다. 각 tool 호출 결과가 LLM conversation history에 누적되기 때문에, **기사 본문을 LLM에게 짧게 출력하라고 지시해도 소용없다** — tool 반환값 자체가 이미 context를 소비한다.
 
-- 기사 최대 **7개** 선택
+예: 4쿼리 × 5결과 × 1500단어 ≈ 40000토큰. 시스템 프롬프트·task 설명 누적 → 128K 초과.
+
+**해결:** tool 레벨(`web_search_tool`)에서 반환 전에 직접 truncate.
+- `max_results=3` (쿼리당 결과 수)
 - 기사 본문 최대 **1500단어** 제한
+- tasks.yaml: 최종 선택 기사 최대 **7개**
+
+이렇게 하면 최악의 경우 4쿼리 × 3결과 × 1500단어 ≈ 24000토큰으로 제한된다.
 
 ---
 

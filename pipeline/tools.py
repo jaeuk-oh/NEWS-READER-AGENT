@@ -16,7 +16,7 @@ def web_search_tool(query: str):
             query=query,
             search_depth="advanced",
             topic="news",
-            max_results=5,
+            max_results=3,
             include_raw_content=True,
         )
     except Exception as e:
