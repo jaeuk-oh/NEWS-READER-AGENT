@@ -1,22 +1,16 @@
 """이메일 발송 서비스.
 
-Gmail SMTP를 사용해 뉴스 브리핑을 구독자에게 전송한다.
+Resend API를 사용해 뉴스 브리핑을 구독자에게 전송한다.
 HTML 본문은 inline CSS로 스타일링되며, 구독 취소 링크를 포함한다.
 """
 import os
-import socket
-import smtplib
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 import markdown2
+import resend
 
 logger = logging.getLogger(__name__)
-
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 465
 
 
 def _build_html(topic: str, today: str, content_html: str, unsubscribe_url: str) -> str:
@@ -107,40 +101,30 @@ def send_email_to_subscriber(
         report_md: 마크다운 형식의 리포트 본문.
         unsubscribe_token: 구독 취소 링크에 사용할 UUID 토큰.
     """
-    sender   = os.environ["GMAIL_SENDER"]
-    password = os.environ["GMAIL_APP_PASSWORD"]
-    # 구독 취소 링크 기반 URL (환경 변수로 주입, 기본값은 로컬)
+    resend.api_key = os.environ["RESEND_API_KEY"]
+    sender = os.environ["RESEND_SENDER"]  # e.g. "News Agent <noreply@yourdomain.com>"
     base_url = os.environ.get("API_BASE_URL", "http://localhost:8000")
 
-    today   = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     subject = f"[News Briefing] {today} — {topic}"
 
-    # 마크다운 → HTML 변환
     content_html = markdown2.markdown(
         report_md, extras=["fenced-code-blocks", "tables", "header-ids"]
     )
 
-    # 구독 취소 URL 생성
     unsubscribe_url = f"{base_url}/subscriptions/unsubscribe?token={unsubscribe_token}"
-
     html_body = _build_html(topic, today, content_html, unsubscribe_url)
 
-    msg = MIMEMultipart("alternative")
-    msg["From"]    = sender
-    msg["To"]      = recipient
-    msg["Subject"] = subject
-    # List-Unsubscribe 헤더 — Gmail/Outlook이 자동으로 취소 버튼을 노출함
-    msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
-    msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-
-    msg.attach(MIMEText(report_md, "plain", "utf-8"))
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
-
-    # Render 컨테이너는 IPv6 라우팅이 없는 경우가 있어 [Errno 101] ENETUNREACH 발생.
-    # getaddrinfo(AF_INET)으로 IPv4 주소를 명시적으로 선택한다.
-    ipv4 = socket.getaddrinfo(SMTP_HOST, SMTP_PORT, socket.AF_INET)[0][4][0]
-    with smtplib.SMTP_SSL(ipv4, SMTP_PORT, timeout=30) as server:
-        server.login(sender, password)
-        server.sendmail(sender, recipient, msg.as_string())
+    resend.Emails.send({
+        "from": sender,
+        "to": [recipient],
+        "subject": subject,
+        "html": html_body,
+        "text": report_md,
+        "headers": {
+            "List-Unsubscribe": f"<{unsubscribe_url}>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+    })
 
     logger.info(f"Subscriber email sent to {recipient} (topic={topic})")
