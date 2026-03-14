@@ -115,16 +115,14 @@ uv run pytest tests/
 
 ## Render 배포 시 주의사항
 
-### ★ SMTP 포트 + IPv4 강제
-Render 서버는 아웃바운드 포트 587(STARTTLS)이 차단되어 있다. `smtplib.SMTP_SSL` + 포트 465를 사용해야 한다.
+### ★ SMTP 불가 → Resend API 사용
+Render는 스팸 방지 목적으로 아웃바운드 SMTP 포트(25, 465, 587)를 전부 차단한다. `smtplib`로 어떤 포트를 써도 `[Errno 101] Network is unreachable` 또는 `timed out` 에러가 발생한다.
 
-추가로 Render 컨테이너는 IPv6 라우팅이 없는 경우가 있어, Python이 `smtp.gmail.com`을 IPv6로 resolve하면 `[Errno 101] Network is unreachable`이 발생한다. `socket.getaddrinfo(AF_INET)`으로 IPv4 주소를 명시적으로 선택해야 한다.
+**해결:** `smtplib` 대신 Resend SDK 사용. Resend는 `api.resend.com`에 HTTPS(443) 요청을 보내므로 Render에서 차단되지 않는다.
 
-```python
-ipv4 = socket.getaddrinfo(SMTP_HOST, SMTP_PORT, socket.AF_INET)[0][4][0]
-with smtplib.SMTP_SSL(ipv4, SMTP_PORT, timeout=30) as server:
-    ...
-```
+필요한 환경변수:
+- `RESEND_API_KEY`: Resend 대시보드에서 발급
+- `RESEND_SENDER`: 인증된 도메인의 발신자 주소 (예: `noreply@yourdomain.com`)
 
 ### ★ CrewAI tracing 프롬프트 hang
 CrewAI는 초기 실행 시 tracing 설정 파일(`~/.config/crewai/settings.json`)이 없으면 사용자 입력을 기다린다. Render의 백그라운드 스레드(non-TTY) 환경에서는 이 프롬프트가 무한 대기 상태가 된다. 새 컨테이너 빌드 시마다 설정 파일이 초기화되므로 코드에서 직접 비활성화해야 한다.
@@ -152,6 +150,9 @@ PostgreSQL 기반의 managed DB를 프리티어에서 즉시 사용할 수 있�
 
 ### 왜 FastAPI 서버를 별도로 두는가
 Supabase `service_role` 키(RLS 우회 권한)를 브라우저에 노출하지 않기 위해서다. FastAPI를 중간에 두면 민감한 키는 서버에만 존재하고, 비즈니스 로직(구독 중복 검사, 스케줄러 트리거 등)을 한 곳에서 관리할 수 있다.
+
+### 왜 Resend인가 (이메일 발송)
+Render 서버는 아웃바운드 SMTP 포트를 전부 차단하기 때문에 `smtplib`(Gmail SMTP)으로 이메일을 보낼 수 없다. Resend는 HTTPS API 기반이라 포트 제한 없이 동작하고, 도메인 인증 후 자체 도메인 주소로 발송할 수 있다.
 
 ### 왜 이메일 발송인가
 뉴스 브리핑은 정해진 시각에 푸시되어야 하는 비동기 콘텐츠다. 이메일은 수신자가 오프라인이어도 전달되고, 별도 앱 설치 없이 모든 기기에서 읽을 수 있다.
