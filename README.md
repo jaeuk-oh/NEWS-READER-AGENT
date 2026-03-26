@@ -6,18 +6,279 @@
 
 ## Agent Pipeline
 
+### 전체 흐름 개요
+
 ```
-[User] email + topic + schedule_time 입력
-          ↓
-[Scheduler] 매분 DB 확인 → 설정 시각에 트리거
-          ↓
-[news_hunter_agent]   멀티 쿼리 검색 + 웹 스크래핑 + 점수 산정
-          ↓
-[summarizer_agent]    3단계 요약 + 핵심 시사점 추출
-          ↓
-[curator_agent]       점수 기반 리드 선정 + 동적 섹션 구성 + 최종 리포트
-          ↓
-[Notifier] 이메일 발송 (HTML 템플릿 + 수신거부 링크)
+[User]
+  email + topic + schedule_time 입력
+          │
+          ▼
+[FastAPI] POST /subscriptions
+  Supabase subscriptions 테이블에 저장
+          │
+          ▼
+[subscription_scheduler.py]  ← 매 30초마다 schedule.run_pending() 호출
+  check_and_run() — 매분 실행
+  now_hhmm = datetime.now().strftime("%H:%M")
+  due = db.get_due_subscriptions(now_hhmm)
+          │
+          ├─ due가 비어있으면 → 종료 (아무것도 하지 않음)
+          │
+          ▼
+  동일 topic끼리 그룹핑 (itertools.groupby)
+  → 같은 topic 구독자가 여럿이어도 CrewAI 파이프라인은 1회만 실행
+          │
+          ▼
+[CrewAI Pipeline]  run_crew(topic)
+  ┌─────────────────────────────────────┐
+  │  1. news_hunter_agent               │
+  │     content_harvesting_task         │
+  ├─────────────────────────────────────┤
+  │  2. summarizer_agent                │
+  │     summarization_task              │
+  ├─────────────────────────────────────┤
+  │  3. curator_agent                   │
+  │     final_report_assembly_task      │
+  └─────────────────────────────────────┘
+          │
+          ├─ 파이프라인 예외 → _run_for_topic() returns None → 해당 topic 건너뜀
+          │
+          ▼
+  결과 검증 (_run_for_topic)
+  ① content_harvest.md에 "Articles after filtering: 0" 포함 여부 확인
+  ② final_report.md 존재 여부 확인
+  ③ 리포트 길이 < 300자 여부 확인
+  → 검증 실패 시 None 반환, 이메일 발송 건너뜀
+          │
+          ▼
+  구독자별 번역 + 이메일 발송
+  (target_lang != "en" → translate_to_TargetLang)
+          │
+          ▼
+[Notifier]  send_email_to_subscriber()
+  Resend API → 구독자 이메일 수신
+```
+
+---
+
+### 1단계 — Scheduler: 구독 트리거
+
+`subscription_scheduler.py`는 두 가지 실행 모드를 가진다.
+
+| 모드 | 함수 | 용도 |
+|---|---|---|
+| 상시 구동 | `check_and_run()` | 매분 HH:MM 정확 매칭 |
+| 일회성 | `run_once()` | GitHub Actions 등에서 시간대(HH) 단위 실행 |
+
+**예외 처리:**
+- `db.get_due_subscriptions()` 실패 시 예외가 스케줄러 루프 밖으로 전파되지 않도록 `check_and_run` 전체가 `schedule` 라이브러리의 잡 단위로 격리됨
+- 특정 topic 파이프라인 실패 시 `continue`로 다음 topic으로 넘어감 — 한 topic 오류가 다른 구독자에게 영향을 주지 않음
+
+---
+
+### 2단계 — CrewAI Pipeline: 3-Agent 순차 파이프라인
+
+#### Agent 1: `news_hunter_agent` — 콘텐츠 수집
+
+**역할:** 주제를 3~4개의 독립 검색 쿼리로 분해하고, 각 쿼리 결과에서 실제 기사 URL만 선별하여 본문을 수집한다.
+
+```
+topic 입력
+    │
+    ▼
+쿼리 분해 (3~4개)
+    │
+    ▼
+web_search_tool(query) — Tavily API 호출
+    │
+    ├─ TAVILY_API_KEY 미설정 → "Error: TAVILY_API_KEY is not set." 반환
+    ├─ 네트워크/API 오류   → "Error: search request failed — {e}. Do not retry." 반환
+    ├─ 결과 없음           → "No articles found for this query." 반환
+    └─ 정상               → 기사 목록 반환 (최대 max_results=3개)
+         │
+         ▼
+    각 기사 처리 (tools.py)
+    ├─ raw_content 또는 content 추출
+    ├─ 연속 줄바꿈 정리 (re.sub)
+    ├─ 1500단어 초과 시 truncate
+    └─ 개별 기사 처리 실패 시 continue (다음 기사로)
+```
+
+**URL 필터링 기준 (LLM 판단):**
+- ❌ `/tag/`, `/topic/`, `/hub/`, `/section/`, `/category/` 포함 URL 제외
+- ❌ 200단어 미만 기사 제외
+- ❌ 48시간 초과 기사 제외 (단, 진행 중인 사안은 예외)
+- ✅ 최종 7개 이하만 선택
+
+**Fallback 전략 (수집 기사 < 3개인 경우 순서대로 시도):**
+
+```
+Step A: 쿼리 단순화 — 수식어 제거 후 핵심어만 재검색
+    │ 실패
+    ▼
+Step B: 영어 쿼리 — 비영어 토픽을 영어로 변환 후 재검색
+    │ 실패
+    ▼
+Step C: 시간 범위 확장 — 48시간 → 7일, 해당 기사에 "[older context]" 레이블 부착
+    │ 실패
+    ▼
+0건 확정 → content_harvest.md에 "Articles after filtering: 0" 기록 후 중단
+           (절대 콘텐츠를 조작하거나 없는 기사를 만들지 않음)
+```
+
+**출력:** `output/content_harvest.md` — 기사별 Credibility Score(1~10) + Relevance Score(1~10) 포함
+
+---
+
+#### Agent 2: `summarizer_agent` — 3단계 요약
+
+**역할:** harvest 결과를 Relevance Score 내림차순으로 처리하고 각 기사를 3개 계층의 요약으로 변환한다.
+
+```
+content_harvest.md 수신 (context_carryover)
+    │
+    ▼
+Relevance Score 내림차순 정렬
+    │
+    ▼
+각 기사 요약 (3-tier)
+  ├─ Headline Summary (≤280자) — 트위터 스타일, 핵심 수치 포함
+  ├─ Executive Summary (150~200단어) — 사실 기반, 객관적
+  └─ Comprehensive Summary (400~600단어) — 배경·맥락·전망 포함
+       │
+       └─ 기사 본문이 누락되거나 truncate된 경우에만 web_search_tool 재호출
+          (fallback, 기본 경로가 아님)
+    │
+    ▼
+각 기사 끝에 Key Takeaways 3개 bullet 추가
+```
+
+**출력:** `output/summary.md`
+
+---
+
+#### Agent 3: `curator_agent` — 최종 리포트 조합
+
+**역할:** 요약 결과를 하나의 이메일 발송용 뉴스 브리핑으로 편집한다.
+
+```
+summary.md 수신
+    │
+    ▼
+Lead Story 선정
+  기준: (Relevance + Credibility) 합산 최고점
+  동점 시: Relevance 우선
+    │
+    ▼
+"Today at a Glance" 작성 — 기사당 1줄 요약
+    │
+    ▼
+나머지 기사를 콘텐츠 테마에 따라 동적 섹션 분류
+  (미리 정해진 카테고리 없음 — 실제 기사 내용에서 섹션 도출)
+    │
+    ▼
+각 섹션에 편집자 도입 문장 작성 (2~3문장)
+    │
+    ▼
+"Analysis and Outlook" 작성
+  — 200~300단어 단일 단락
+  — 크로스 스토리 테마 종합 + 향후 전망
+    │
+    ▼
+출력 형식 강제 규칙
+  ✅ 반드시 "# Daily News Briefing: {topic}" 으로 시작
+  ✅ 표준 마크다운 헤딩만 사용 (##, ###)
+  ❌ 코드 펜스 사용 금지
+  ❌ 메타 텍스트·설명문 포함 금지
+  ❌ Further Reading 섹션 추가 금지
+  ❌ 이모지 사용 금지
+```
+
+**리소스 제한 (LLM 컨텍스트 오버플로 방지):**
+- `max_iter=8` — LLM 반복 상한
+- `max_retry_limit=1` — 오류 시 재시도 최대 1회
+
+**출력:** `output/final_report.md`
+
+---
+
+### 3단계 — 결과 검증 (`_run_for_topic`)
+
+CrewAI 파이프라인 완료 후 이메일 발송 전에 3단계 가드를 통과해야 한다.
+
+```
+① 제로 기사 가드
+   content_harvest.md에 "Articles after filtering: 0" 포함?
+   → True : 이메일 건너뜀 (⚠️ WARNING 로그)
+   → False: 다음 단계
+
+② 리포트 파일 존재 가드
+   output/final_report.md 파일 없음?
+   → True : 이메일 건너뜀 (❌ ERROR 로그)
+   → False: 다음 단계
+
+③ 리포트 최소 길이 가드
+   report 길이 < 300자?
+   → True : 이메일 건너뜀 (❌ ERROR 로그)
+   → False: report_md 반환 → 이메일 발송 진행
+```
+
+---
+
+### 4단계 — 번역 (선택적)
+
+`target_lang != "en"` 인 구독자에 대해서만 실행된다.
+
+```
+report_md (영어)
+    │
+    ▼
+_protect_urls() — 마크다운 링크의 URL을 플레이스홀더로 치환
+  ([text](https://...) → [text](URLPLACEHOLDER0))
+    │
+    ▼
+_split_into_chunks() — 4500자 단위로 분할
+  (Google Translate API 5000자 제한 대응)
+    │
+    ▼
+GoogleTranslator.translate(chunk) — 청크별 번역
+    ├─ 빈 번역 반환 → 원문 유지 (⚠️ WARNING)
+    └─ 예외 발생  → 해당 청크 원문 유지 후 계속
+    │
+    ▼
+_restore_urls() — 플레이스홀더를 원본 URL로 복원
+    │
+    ▼
+번역 실패 전체 예외 발생 시
+→ scheduler에서 catch → translation skipped 경고 로그
+→ 영어 원문으로 이메일 발송 진행
+```
+
+---
+
+### 5단계 — 이메일 발송 (`send_email_to_subscriber`)
+
+```
+report_md (번역 완료 또는 영어 원문)
+    │
+    ▼
+markdown2.markdown() → HTML 변환
+  extras: fenced-code-blocks, tables, header-ids
+    │
+    ▼
+_build_html() — inline CSS HTML 이메일 템플릿 조합
+  헤더: 주제 + 날짜
+  본문: 변환된 HTML
+  푸터: 구독 취소 링크
+    │
+    ▼
+resend.Emails.send()
+  headers:
+    List-Unsubscribe: <{unsubscribe_url}>
+    List-Unsubscribe-Post: List-Unsubscribe=One-Click  ← RFC 8058 원클릭 수신거부
+    │
+    ├─ 성공 → ✅ INFO 로그
+    └─ 실패 → ❌ ERROR 로그, 다음 구독자 계속 처리
 ```
 
 ---
